@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — API_Busca</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="card" style="max-width: 500px">
+    <h2><span id="company-name">Carregando...</span></h2>
+
+    <form id="cred-form" onsubmit="saveCredentials(event)">
+      <label>Token Provider (SGA)</label>
+      <input type="password" id="provider-token" placeholder="Cole o token da Provider" required />
+
+      <label>Usuario Provider</label>
+      <input type="text" id="provider-user" placeholder="Ex: Atomos.dev" required />
+
+      <label>Senha Provider</label>
+      <input type="password" id="provider-pass" placeholder="Senha do SGA" required />
+
+      <label>Token Quepasa</label>
+      <input type="password" id="quepasa-token" placeholder="Cole o token da Quepasa" required />
+
+      <label>URL Base Quepasa</label>
+      <input type="text" id="quepasa-url" value="http://localhost:31000" />
+
+      <label>WhatsApp (DDI + DDD + numero)</label>
+      <input type="text" id="whatsapp" placeholder="5511999999999" required />
+
+      <button type="submit">Salvar Credenciais</button>
+    </form>
+
+    <button class="btn-success" onclick="triggerReport()">
+      Testar Envio Agora
+    </button>
+
+    <div id="last-status" class="status-box status-none">
+      Carregando status...
+    </div>
+
+    <button class="btn-logout" onclick="logout()">Sair</button>
+
+    <p class="msg" id="dash-msg"></p>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

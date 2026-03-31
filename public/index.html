@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API_Busca — Login</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="card">
+    <h1>API_Busca</h1>
+
+    <div class="tabs">
+      <button class="active" onclick="showTab('login')">Entrar</button>
+      <button onclick="showTab('register')">Cadastrar</button>
+    </div>
+
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <input type="email" id="login-email" placeholder="Email" required />
+      <input type="password" id="login-pass" placeholder="Senha" required />
+      <button type="submit">Entrar</button>
+    </form>
+
+    <form id="register-form" class="hidden" onsubmit="handleRegister(event)">
+      <input type="text" id="reg-company" placeholder="Nome da Empresa" required />
+      <input type="email" id="reg-email" placeholder="Email" required />
+      <input type="password" id="reg-pass" placeholder="Senha (min 6)" minlength="6" required />
+      <button type="submit">Cadastrar</button>
+    </form>
+
+    <p class="msg" id="message"></p>
+  </div>
+
+  <script src="/js/auth.js"></script>
+</body>
+</html>
