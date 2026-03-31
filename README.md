@@ -69,11 +69,11 @@
 
 ## FASE 5 — Job Scheduler
 
-- [ ] **Etapa 35** — Instalar node-cron
-- [ ] **Etapa 36** — Pipeline por tenant
-- [ ] **Etapa 37** — Job diário (todos os tenants)
-- [ ] **Etapa 38** — Scheduler 19:00 BRT (RNF02)
-- [ ] **Etapa 39** — Endpoint de trigger manual
+- [x] **Etapa 35** — Instalar node-cron `5ecab3f`
+- [x] **Etapa 36** — Pipeline por tenant `5ecab3f`
+- [x] **Etapa 37** — Job diário (todos os tenants) `5ecab3f`
+- [x] **Etapa 38** — Scheduler 19:00 BRT (RNF02) `5ecab3f`
+- [x] **Etapa 39** — Endpoint de trigger manual `5ecab3f`
 
 ---
 
