@@ -34,19 +34,19 @@
 
 ## FASE 2 — Autenticação JWT Manual
 
-- [ ] **Etapa 15** — Instalar dependências de auth
-- [ ] **Etapa 16** — Middleware JWT
-- [ ] **Etapa 17** — Auth Service (register + login) (RF01)
-- [ ] **Etapa 18** — Auth Controller
-- [ ] **Etapa 19** — Auth Routes
-- [ ] **Etapa 20** — Credentials Service (RF02)
-- [ ] **Etapa 21** — Credentials Controller + Routes + Route Registry
+- [x] **Etapa 15** — Instalar dependências de auth `e675d4c`
+- [x] **Etapa 16** — Middleware JWT `9cda539`
+- [x] **Etapa 17** — Auth Service (register + login) (RF01) `2954dc2`
+- [x] **Etapa 18** — Auth Controller `80484c7`
+- [x] **Etapa 19** — Auth Routes `b6f99b1`
+- [x] **Etapa 20** — Credentials Service (RF02) `6d303a6`
+- [x] **Etapa 21** — Credentials Controller + Routes + Route Registry `72fca46`
 
 ---
 
 ## FASE 3 — Serviço Provider
 
-- [ ] **Etapa 22** — Instalar Axios
+- [x] **Etapa 22** — Instalar Axios `e803475`
 - [ ] **Etapa 23** — Cliente base Provider
 - [ ] **Etapa 24** — Tipagens Provider
 - [ ] **Etapa 25** — RF03: Buscar veículos ativos
