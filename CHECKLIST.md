@@ -25,8 +25,8 @@
 - [x] **Etapa 10** — Schema: ReportLog (RNF04) `0a3e39e`
 - [x] **Etapa 11** — Rodar migration `e9cc6ef`
 - [x] **Etapa 12** — Prisma Client singleton `3c4b03e`
-- [ ] **Etapa 13** — Módulo de criptografia (AES-256-GCM) (RNF01)
-- [ ] **Etapa 14** — Utilitários de data + validação de env
+- [x] **Etapa 13** — Módulo de criptografia (AES-256-GCM) (RNF01) `f2c1ce7`
+- [x] **Etapa 14** — Utilitários de data + validação de env `6cc24ad`
 
 **Push 2 planejado** — Após Etapa 14 (FASE 1 completa)
 
