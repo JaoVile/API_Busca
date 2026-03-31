@@ -1,100 +1,188 @@
-# Checklist — API_Busca (48 Etapas)
+# API_Busca
 
-> Marcar com [x] conforme cada etapa for concluída.
+Automacao de relatorios diarios via Provider para WhatsApp (Quepasa).
+Multi-tenant com isolamento de credenciais (AES-256-GCM).
 
----
+## Stack
 
-## FASE 0 — Setup do Projeto
+- **Backend**: Node.js + Express + TypeScript
+- **Banco**: PostgreSQL (Docker) + Prisma ORM
+- **Auth**: JWT (bcryptjs + jsonwebtoken)
+- **Scheduler**: node-cron (19:00 BRT)
+- **APIs externas**: Provider SGA v2 + Quepasa (WhatsApp)
+- **Frontend**: HTML/CSS/JS (dark theme minimalista)
 
-- [x] **Etapa 1** — Criar repositório e estrutura de pastas `86c1c16`
-- [x] **Etapa 2** — Inicializar Node.js + dependências base `67cd569`
-- [x] **Etapa 3** — Configurar TypeScript `da3138f`
-- [x] **Etapa 4** — Express mínimo (health check) `924a69d`
-- [x] **Etapa 5** — .env.example e .gitignore `1933bd8`
-- [x] **Etapa 6** — Docker Compose (PostgreSQL) `6b11042`
+## Arquitetura
 
-**Push 1 realizado** — FASE 0 + banco migrado
+```
+Frontend (public/)  -->  Express (Node+TS)  -->  PostgreSQL (Docker)
+                              |
+                    +---------+---------+
+                    |                   |
+              Provider API          Quepasa API
+              (dados)            (WhatsApp)
+```
 
----
+## Fluxo do Relatorio
 
-## FASE 1 — Banco de Dados e Utilitários
+1. **Trigger**: Cron Job as 19:00 BRT (ou manual via dashboard)
+2. **Auth**: Recupera credenciais criptografadas do banco, autentica na Provider (2 etapas)
+3. **Fetch**: 4 consultas em paralelo (ativos, vendas, cancelamentos, financeiro)
+4. **Parse**: Calcula percentuais e formata valores
+5. **Dispatch**: Envia mensagem formatada via Quepasa (WhatsApp)
+6. **Log**: Registra resultado (SUCCESS / PARTIAL_FAILURE / FAILURE)
 
-- [x] **Etapa 7** — Instalar Prisma `7980946`
-- [x] **Etapa 8** — Schema: Tenant (RF01) `7470042`
-- [x] **Etapa 9** — Schema: TenantCredentials (RF02, RNF01) `10a4230`
-- [x] **Etapa 10** — Schema: ReportLog (RNF04) `0a3e39e`
-- [x] **Etapa 11** — Rodar migration `e9cc6ef`
-- [x] **Etapa 12** — Prisma Client singleton `3c4b03e`
-- [x] **Etapa 13** — Módulo de criptografia (AES-256-GCM) (RNF01) `f2c1ce7`
-- [x] **Etapa 14** — Utilitários de data + validação de env `6cc24ad`
+## Setup
 
-**Push 2 planejado** — Após Etapa 14 (FASE 1 completa)
+### Pre-requisitos
 
----
+- Node.js 18+
+- Docker Desktop
+- Git
 
-## FASE 2 — Autenticação JWT Manual
+### Instalacao
 
-- [x] **Etapa 15** — Instalar dependências de auth `e675d4c`
-- [x] **Etapa 16** — Middleware JWT `9cda539`
-- [x] **Etapa 17** — Auth Service (register + login) (RF01) `2954dc2`
-- [x] **Etapa 18** — Auth Controller `80484c7`
-- [x] **Etapa 19** — Auth Routes `b6f99b1`
-- [x] **Etapa 20** — Credentials Service (RF02) `6d303a6`
-- [x] **Etapa 21** — Credentials Controller + Routes + Route Registry `72fca46`
+```bash
+git clone https://github.com/JaoVile/API_Busca.git
+cd API_Busca
+cp .env.example .env          # preencher com suas chaves
+docker compose up -d           # sobe o PostgreSQL
+npm install
+npx prisma migrate dev --schema prisma/schema.prisma --config prisma/prisma.config.ts
+npm run dev
+```
 
----
+### Variaveis de Ambiente (.env)
 
-## FASE 3 — Serviço Provider
+| Variavel | Descricao |
+|----------|-----------|
+| `PORT` | Porta do servidor (default: 3000) |
+| `DATABASE_URL` | URL de conexao PostgreSQL |
+| `JWT_SECRET` | Chave secreta para assinar tokens JWT |
+| `ENCRYPTION_KEY` | 64 caracteres hex (32 bytes) para AES-256-GCM |
 
-- [x] **Etapa 22** — Instalar Axios `e803475`
-- [x] **Etapa 23** — Cliente base Provider (two-step auth) `c205e73`
-- [x] **Etapa 24** — Tipagens Provider `e3f8767`
-- [x] **Etapa 25** — RF03: Buscar veículos ativos `e3f8767`
-- [x] **Etapa 26** — RF04: Vendas do dia `e3f8767`
-- [x] **Etapa 27** — RF05: Cancelamentos do dia `e3f8767`
-- [x] **Etapa 28** — RF06 + RN01: Financeiro mensal `e3f8767`
-- [x] **Etapa 29** — Orquestrador Provider (parallel fetch) `e3f8767`
+Para gerar chaves seguras:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
----
+## Endpoints da API
 
-## FASE 4 — Formatação + Quepasa
+### Publicos (sem autenticacao)
 
-- [x] **Etapa 30** — RF07: Formatador de mensagem `de26e53`
-- [x] **Etapa 31** — Cliente Quepasa `de26e53`
-- [x] **Etapa 32** — RF08: Envio WhatsApp via Quepasa `de26e53`
-- [x] **Etapa 33** — Report Log Service (RNF04) `de26e53`
-- [x] **Etapa 34** — Report Controller + Routes (RNF03) `de26e53`
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| POST | `/api/auth/register` | Cadastro de empresa |
+| POST | `/api/auth/login` | Login (retorna JWT) |
+| GET | `/api/health` | Health check |
 
----
+### Protegidos (requer Bearer Token)
 
-## FASE 5 — Job Scheduler
+| Metodo | Rota | Descricao |
+|--------|------|-----------|
+| PUT | `/api/credentials` | Salvar tokens (Provider + Quepasa) |
+| GET | `/api/credentials/status` | Ver configuracao atual |
+| GET | `/api/reports/last-status` | Ultimo envio de relatorio |
+| GET | `/api/reports/history` | Historico de envios |
+| POST | `/api/reports/trigger` | Disparar relatorio manualmente |
 
-- [x] **Etapa 35** — Instalar node-cron `5ecab3f`
-- [x] **Etapa 36** — Pipeline por tenant `5ecab3f`
-- [x] **Etapa 37** — Job diário (todos os tenants) `5ecab3f`
-- [x] **Etapa 38** — Scheduler 19:00 BRT (RNF02) `5ecab3f`
-- [x] **Etapa 39** — Endpoint de trigger manual `5ecab3f`
+### Exemplo de uso com curl
 
----
+```bash
+# 1. Registrar empresa
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"companyName":"Minha Empresa","email":"admin@empresa.com","password":"123456"}'
 
-## FASE 6 — Frontend Minimalista
+# 2. Login
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@empresa.com","password":"123456"}'
+# Copie o token retornado
 
-- [x] **Etapa 40** — CSS Dark (RNF03) `1e92533`
-- [x] **Etapa 41** — Login/Register page + JS (RNF03) `1e92533`
-- [x] **Etapa 42** — Dashboard HTML (RNF03) `1e92533`
-- [x] **Etapa 43** — Dashboard JS (RNF03) `1e92533`
+# 3. Configurar credenciais
+curl -X PUT http://localhost:3000/api/credentials \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -d '{
+    "providerToken":"token_sga_provider",
+    "providerUser":"usuario_provider",
+    "providerPass":"senha_provider",
+    "quepasaToken":"token_quepasa",
+    "quepasaBaseUrl":"http://localhost:31000",
+    "whatsappNumber":"5511999999999"
+  }'
 
----
+# 4. Disparar relatorio
+curl -X POST http://localhost:3000/api/reports/trigger \
+  -H "Authorization: Bearer SEU_TOKEN"
+```
 
-## FASE 7 — Testes
+## Frontend
 
-- [ ] **Etapa 44** — Setup Jest
-- [ ] **Etapa 45** — Testes: encryption + dateUtils
-- [ ] **Etapa 46** — Testes: messageFormatter
-- [ ] **Etapa 47** — Teste de integração: pipeline mockado
+Acesse `http://localhost:3000` no navegador:
 
----
+- **Tela de Login**: cadastro e login de empresas
+- **Dashboard**: configurar credenciais, testar envio, ver status
 
-## FASE 8 — Deploy e Docs
+## Credenciais necessarias
 
-- [ ] **Etapa 48** — README final + push
+### Provider (API SGA v2)
+- **Token SGA**: gerado no painel Provider (Area Cliente > APIs > Gerenciar APIs)
+- **Usuario**: usuario ativo do sistema SGA
+- **Senha**: senha de acesso do SGA
+
+A autenticacao e feita em 2 etapas:
+1. POST `/usuario/autenticar` com Token SGA no header + usuario/senha no body
+2. Retorna `token_usuario` (nao expira) usado nas demais requisicoes
+
+### Quepasa (WhatsApp)
+- **Token**: token de acesso da instancia Quepasa
+- **URL Base**: endereco do servidor Quepasa (ex: `http://localhost:31000`)
+
+## Exemplo de Mensagem Gerada
+
+```
+📊 *Relatorio Diario - Nome da Empresa*
+
+🚗 Ativos Totais: 1.250
+✅ Vendas hoje: 05
+❌ Cancelados hoje: 02
+
+💰 *Financeiro Mensal:*
+  • Aberto: R$ 50.000,00
+  • Pago: R$ 35.000,00 (70%)
+```
+
+## Testes
+
+```bash
+npm test
+```
+
+## Scripts disponiveis
+
+| Script | Comando | Descricao |
+|--------|---------|-----------|
+| `npm run dev` | `nodemon` | Desenvolvimento (auto-reload) |
+| `npm run build` | `tsc` | Compila TypeScript |
+| `npm start` | `node dist/server.js` | Producao |
+| `npm test` | `jest` | Roda testes |
+
+## Requisitos atendidos
+
+| Codigo | Descricao | Status |
+|--------|-----------|--------|
+| RF01 | Cadastro de Tenant | Implementado |
+| RF02 | Configuracao de Credenciais | Implementado |
+| RF03 | Coleta de Ativos | Implementado |
+| RF04 | Relatorio de Vendas | Implementado |
+| RF05 | Monitoramento de Cancelamentos | Implementado |
+| RF06 | Resumo Financeiro | Implementado |
+| RF07 | Formatacao de Mensagem | Implementado |
+| RF08 | Disparo via Quepasa | Implementado |
+| RNF01 | Isolamento de Credenciais (AES-256) | Implementado |
+| RNF02 | Periodicidade (Cron 19:00 BRT) | Implementado |
+| RNF03 | Simplicidade de Interface | Implementado |
+| RNF04 | Tratamento de Erros de API | Implementado |
+| RN01 | Boletos do mes inteiro (dia 01 ao ultimo dia) | Implementado |
