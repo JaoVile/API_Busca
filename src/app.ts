@@ -1,14 +1,18 @@
 import express from 'express';
 import path from 'path';
+import routes from './routes';
 
 const app = express();
 
 // Middlewares globais
-app.use(express.json());                              // Entende JSON no body das requisições
-app.use(express.urlencoded({ extended: true }));      // Entende dados de formulários HTML
-app.use(express.static(path.join(__dirname, '..', 'public'))); // Serve arquivos estáticos (HTML, CSS, JS)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Rota de health check — usada pra verificar se o servidor está no ar
+// Rotas da API
+app.use('/api', routes);
+
+// Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
