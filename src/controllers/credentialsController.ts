@@ -7,18 +7,20 @@ const service = new CredentialsService();
 export class CredentialsController {
   async upsert(req: AuthRequest, res: Response) {
     try {
-      const { providerToken, quepasaToken, quepasaBaseUrl, whatsappNumber } =
+      const { providerToken, providerUser, providerPass, quepasaToken, quepasaBaseUrl, whatsappNumber } =
         req.body;
 
-      if (!providerToken || !quepasaToken || !whatsappNumber) {
+      if (!providerToken || !providerUser || !providerPass || !quepasaToken || !whatsappNumber) {
         res.status(400).json({
-          error: 'providerToken, quepasaToken e whatsappNumber são obrigatórios',
+          error: 'providerToken, providerUser, providerPass, quepasaToken e whatsappNumber são obrigatórios',
         });
         return;
       }
 
       await service.upsert(req.tenantId!, {
         providerToken,
+        providerUser,
+        providerPass,
         quepasaToken,
         quepasaBaseUrl,
         whatsappNumber,

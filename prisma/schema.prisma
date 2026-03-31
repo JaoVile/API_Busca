@@ -25,6 +25,8 @@ model TenantCredentials {
   id                    String   @id @default(uuid())
   tenantId              String   @unique @map("tenant_id")
   providerTokenEncrypted  String   @map("provider_token_encrypted")
+  providerUserEncrypted   String   @map("provider_user_encrypted")
+  providerPassEncrypted   String   @map("provider_pass_encrypted")
   quepasaTokenEncrypted String   @map("quepasa_token_encrypted")
   quepasaBaseUrl        String   @default("http://localhost:31000") @map("quepasa_base_url")
   whatsappNumber        String   @map("whatsapp_number")

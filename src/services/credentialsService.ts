@@ -3,6 +3,8 @@ import { encrypt, decrypt } from '../utils/encryption';
 
 export interface CredentialsInput {
   providerToken: string;
+  providerUser: string;
+  providerPass: string;
   quepasaToken: string;
   quepasaBaseUrl?: string;
   whatsappNumber: string;
@@ -10,6 +12,8 @@ export interface CredentialsInput {
 
 export interface CredentialsDecrypted {
   providerToken: string;
+  providerUser: string;
+  providerPass: string;
   quepasaToken: string;
   quepasaBaseUrl: string;
   whatsappNumber: string;
@@ -20,6 +24,8 @@ export class CredentialsService {
     // Criptografa os tokens antes de salvar
     const encrypted = {
       providerTokenEncrypted: encrypt(data.providerToken),
+      providerUserEncrypted: encrypt(data.providerUser),
+      providerPassEncrypted: encrypt(data.providerPass),
       quepasaTokenEncrypted: encrypt(data.quepasaToken),
       quepasaBaseUrl: data.quepasaBaseUrl || 'http://localhost:31000',
       whatsappNumber: data.whatsappNumber,
@@ -44,6 +50,8 @@ export class CredentialsService {
     // Descriptografa os tokens pra usar na API
     return {
       providerToken: decrypt(creds.providerTokenEncrypted),
+      providerUser: decrypt(creds.providerUserEncrypted),
+      providerPass: decrypt(creds.providerPassEncrypted),
       quepasaToken: decrypt(creds.quepasaTokenEncrypted),
       quepasaBaseUrl: creds.quepasaBaseUrl,
       whatsappNumber: creds.whatsappNumber,
