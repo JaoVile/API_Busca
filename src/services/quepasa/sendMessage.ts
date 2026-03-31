@@ -13,7 +13,7 @@ export async function sendWhatsAppMessage(
   try {
     const client = createQuepasaClient(params.baseUrl, params.token);
 
-    await client.post('/v3/bot/sendtext', {
+    await client.post('/send', {
       chatId: `${params.phone}@s.whatsapp.net`,
       text: params.message,
     });
