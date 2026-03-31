@@ -36,3 +36,22 @@ model TenantCredentials {
 
   @@map("tenant_credentials")
 }
+
+model ReportLog {
+  id          String       @id @default(uuid())
+  tenantId    String       @map("tenant_id")
+  status      ReportStatus
+  message     String?
+  errorDetail String?      @map("error_detail")
+  executedAt  DateTime     @default(now()) @map("executed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("report_logs")
+}
+
+enum ReportStatus {
+  SUCCESS
+  PARTIAL_FAILURE
+  FAILURE
+}
