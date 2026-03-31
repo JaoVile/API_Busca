@@ -7,5 +7,6 @@ const ctrl = new ReportController();
 
 router.get('/last-status', authMiddleware, ctrl.lastStatus);
 router.get('/history', authMiddleware, ctrl.history);
+router.post('/trigger', authMiddleware, ctrl.triggerManual);
 
 export default router;
