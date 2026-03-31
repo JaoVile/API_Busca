@@ -12,6 +12,7 @@ export async function runReportForTenant(tenantId: string): Promise<void> {
   console.log(`[PIPELINE] Tenant: ${tenantId}`);
 
   try {
+    // 1. AUTH - buscar credenciais
     const creds = await credentialsService.getDecrypted(tenantId);
     if (!creds) {
       await logService.log(tenantId, 'FAILURE', undefined, 'Sem credenciais');
@@ -23,18 +24,41 @@ export async function runReportForTenant(tenantId: string): Promise<void> {
       select: { companyName: true },
     });
 
+    // 2. FETCH - buscar dados da Provider
     const report = await fetchProviderReport(creds.providerToken, creds.providerUser, creds.providerPass);
+
+    // 3. PARSE - formatar mensagem
     const message = formatReportMessage(tenant!.companyName, report);
+    console.log(`[PIPELINE] Mensagem gerada para ${tenant!.companyName}`);
 
-    await sendWhatsAppMessage({
-      baseUrl: creds.quepasaBaseUrl,
-      token: creds.quepasaToken,
-      phone: creds.whatsappNumber,
-      message,
-    });
+    // 4. DISPATCH - enviar via WhatsApp (mesmo com erros parciais)
+    let sendError: string | undefined;
+    try {
+      await sendWhatsAppMessage({
+        baseUrl: creds.quepasaBaseUrl,
+        token: creds.quepasaToken,
+        phone: creds.whatsappNumber,
+        message,
+      });
+    } catch (err: any) {
+      sendError = err.message;
+      console.error(`[PIPELINE] Erro envio WhatsApp: ${sendError}`);
+    }
 
-    const status = report.errors.length > 0 ? 'PARTIAL_FAILURE' : 'SUCCESS';
-    await logService.log(tenantId, status, message, report.errors.length > 0 ? report.errors.join(' | ') : undefined);
+    // 5. LOG - registrar resultado
+    const errors = [...report.errors];
+    if (sendError) errors.push(sendError);
+
+    let status: 'SUCCESS' | 'PARTIAL_FAILURE' | 'FAILURE';
+    if (sendError && report.errors.length > 0) {
+      status = 'FAILURE';
+    } else if (sendError || report.errors.length > 0) {
+      status = 'PARTIAL_FAILURE';
+    } else {
+      status = 'SUCCESS';
+    }
+
+    await logService.log(tenantId, status, message, errors.length > 0 ? errors.join(' | ') : undefined);
     console.log(`[PIPELINE] ${tenant!.companyName}: ${status}`);
   } catch (error: any) {
     console.error(`[PIPELINE] ${tenantId}: ${error.message}`);
