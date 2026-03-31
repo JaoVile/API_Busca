@@ -47,23 +47,23 @@
 ## FASE 3 — Serviço Provider
 
 - [x] **Etapa 22** — Instalar Axios `e803475`
-- [ ] **Etapa 23** — Cliente base Provider
-- [ ] **Etapa 24** — Tipagens Provider
-- [ ] **Etapa 25** — RF03: Buscar veículos ativos
-- [ ] **Etapa 26** — RF04: Vendas do dia
-- [ ] **Etapa 27** — RF05: Cancelamentos do dia
-- [ ] **Etapa 28** — RF06 + RN01: Financeiro mensal
-- [ ] **Etapa 29** — Orquestrador Provider (parallel fetch)
+- [x] **Etapa 23** — Cliente base Provider (two-step auth) `c205e73`
+- [x] **Etapa 24** — Tipagens Provider `e3f8767`
+- [x] **Etapa 25** — RF03: Buscar veículos ativos `e3f8767`
+- [x] **Etapa 26** — RF04: Vendas do dia `e3f8767`
+- [x] **Etapa 27** — RF05: Cancelamentos do dia `e3f8767`
+- [x] **Etapa 28** — RF06 + RN01: Financeiro mensal `e3f8767`
+- [x] **Etapa 29** — Orquestrador Provider (parallel fetch) `e3f8767`
 
 ---
 
 ## FASE 4 — Formatação + Quepasa
 
-- [ ] **Etapa 30** — RF07: Formatador de mensagem
-- [ ] **Etapa 31** — Cliente Quepasa
-- [ ] **Etapa 32** — RF08: Envio WhatsApp via Quepasa
-- [ ] **Etapa 33** — Report Log Service (RNF04)
-- [ ] **Etapa 34** — Report Controller + Routes (RNF03)
+- [x] **Etapa 30** — RF07: Formatador de mensagem `de26e53`
+- [x] **Etapa 31** — Cliente Quepasa `de26e53`
+- [x] **Etapa 32** — RF08: Envio WhatsApp via Quepasa `de26e53`
+- [x] **Etapa 33** — Report Log Service (RNF04) `de26e53`
+- [x] **Etapa 34** — Report Controller + Routes (RNF03) `de26e53`
 
 ---
 
