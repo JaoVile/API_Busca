@@ -5,44 +5,96 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard — API_Busca</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    body { align-items: flex-start; padding: 2rem 1rem; }
+    .container { width: 100%; max-width: 600px; }
+    .section { background: #1e293b; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; }
+    .section h3 { margin-bottom: 1rem; font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .log-item { background: #0f172a; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem; }
+    .log-item .status { font-weight: bold; }
+    .log-item .error { color: #f87171; font-size: 0.8rem; margin-top: 0.25rem; word-break: break-all; }
+    .log-item .date { color: #64748b; font-size: 0.75rem; }
+    .status-SUCCESS { color: #34d399; }
+    .status-PARTIAL_FAILURE { color: #fbbf24; }
+    .status-FAILURE { color: #f87171; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+    .badge-ok { background: #065f46; color: #34d399; }
+    .badge-err { background: #7f1d1d; color: #f87171; }
+    .badge-none { background: #334155; color: #94a3b8; }
+    .info-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+    .info-row:last-child { border: none; }
+    .info-label { color: #94a3b8; }
+  </style>
 </head>
 <body>
-  <div class="card" style="max-width: 500px">
-    <h2><span id="company-name">Carregando...</span></h2>
-
-    <form id="cred-form" onsubmit="saveCredentials(event)">
-      <label>Token Provider (SGA)</label>
-      <input type="password" id="provider-token" placeholder="Cole o token da Provider" required />
-
-      <label>Usuario Provider</label>
-      <input type="text" id="provider-user" placeholder="Ex: Atomos.dev" required />
-
-      <label>Senha Provider</label>
-      <input type="password" id="provider-pass" placeholder="Senha do SGA" required />
-
-      <label>Token Quepasa</label>
-      <input type="password" id="quepasa-token" placeholder="Cole o token da Quepasa" required />
-
-      <label>URL Base Quepasa</label>
-      <input type="text" id="quepasa-url" value="http://localhost:31000" />
-
-      <label>WhatsApp (DDI + DDD + numero)</label>
-      <input type="text" id="whatsapp" placeholder="5511999999999" required />
-
-      <button type="submit">Salvar Credenciais</button>
-    </form>
-
-    <button class="btn-success" onclick="triggerReport()">
-      Testar Envio Agora
-    </button>
-
-    <div id="last-status" class="status-box status-none">
-      Carregando status...
+  <div class="container">
+    <!-- Header -->
+    <div class="section" style="text-align:center;">
+      <h2 id="company-name">Carregando...</h2>
+      <span class="badge badge-none" id="cred-badge">Verificando...</span>
     </div>
 
-    <button class="btn-logout" onclick="logout()">Sair</button>
+    <!-- Status do ultimo envio -->
+    <div class="section">
+      <h3>Ultimo Relatorio</h3>
+      <div id="last-status-detail">Carregando...</div>
+    </div>
 
-    <p class="msg" id="dash-msg"></p>
+    <!-- Acoes rapidas -->
+    <div class="section">
+      <h3>Acoes</h3>
+      <div class="grid-2">
+        <button class="btn-success" onclick="triggerReport()">Testar Envio</button>
+        <button onclick="loadHistory()">Ver Historico</button>
+      </div>
+      <p class="msg" id="dash-msg"></p>
+    </div>
+
+    <!-- Credenciais -->
+    <div class="section">
+      <h3>Configurar Credenciais</h3>
+      <form id="cred-form" onsubmit="saveCredentials(event)">
+        <label>Token Provider (SGA)</label>
+        <input type="password" id="provider-token" placeholder="Cole o token da Provider" required />
+
+        <div class="grid-2">
+          <div>
+            <label>Usuario Provider</label>
+            <input type="text" id="provider-user" placeholder="Ex: Atomos.dev" required />
+          </div>
+          <div>
+            <label>Senha Provider</label>
+            <input type="password" id="provider-pass" placeholder="Senha do SGA" required />
+          </div>
+        </div>
+
+        <label>Token Quepasa</label>
+        <input type="password" id="quepasa-token" placeholder="Cole o token da Quepasa" required />
+
+        <div class="grid-2">
+          <div>
+            <label>URL Base Quepasa</label>
+            <input type="text" id="quepasa-url" value="http://localhost:31000" />
+          </div>
+          <div>
+            <label>WhatsApp</label>
+            <input type="text" id="whatsapp" placeholder="5511999999999" required />
+          </div>
+        </div>
+
+        <button type="submit">Salvar Credenciais</button>
+      </form>
+    </div>
+
+    <!-- Historico -->
+    <div class="section" id="history-section" style="display:none;">
+      <h3>Historico de Envios</h3>
+      <div id="history-list"></div>
+    </div>
+
+    <!-- Logout -->
+    <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 
   <script src="/js/dashboard.js"></script>
