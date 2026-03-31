@@ -79,10 +79,10 @@
 
 ## FASE 6 — Frontend Minimalista
 
-- [ ] **Etapa 40** — CSS Dark (RNF03)
-- [ ] **Etapa 41** — Login/Register page + JS (RNF03)
-- [ ] **Etapa 42** — Dashboard HTML (RNF03)
-- [ ] **Etapa 43** — Dashboard JS (RNF03)
+- [x] **Etapa 40** — CSS Dark (RNF03) `1e92533`
+- [x] **Etapa 41** — Login/Register page + JS (RNF03) `1e92533`
+- [x] **Etapa 42** — Dashboard HTML (RNF03) `1e92533`
+- [x] **Etapa 43** — Dashboard JS (RNF03) `1e92533`
 
 ---
 
