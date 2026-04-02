@@ -3,8 +3,11 @@ import { FinancialSummary } from './providerTypes';
 
 /**
  * RF06 — Resumo financeiro do mês atual + dia atual
- * Usa mes_referente para buscar todos os boletos do mês corrente.
- * Extrai dados diários comparando data_pagamento / data_vencimento com hoje.
+ *
+ * BAIXADOS (pagos): todos do mes_referente corrente
+ * ABERTOS: todos do mes_referente corrente (faturamento total do mês)
+ *
+ * Dados diários extraídos comparando data_pagamento / data_vencimento com hoje.
  *
  * codigo_situacao 1 = BAIXADO (pago)
  * codigo_situacao 2 = ABERTO
@@ -17,15 +20,21 @@ interface MesResult {
   totalHoje: number;
 }
 
-function parseDate(dateStr: string): string {
-  // Normaliza dd/mm/yyyy para yyyy-mm-dd para comparação
+function formatDateBR(date: Date): string {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function parseDateToISO(dateStr: string): string {
   if (!dateStr) return '';
   const parts = dateStr.split('/');
   if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  return dateStr.substring(0, 10); // yyyy-mm-dd
+  return dateStr.substring(0, 10);
 }
 
-async function fetchBoletos(
+async function fetchBoletosMesReferente(
   client: AxiosInstance,
   codSituacao: number,
   mesReferente: string,
@@ -58,8 +67,7 @@ async function fetchBoletos(
       result.count++;
       result.total += valor;
 
-      // Verifica se é de hoje
-      const dataBoleto = parseDate(b[campoData] || '');
+      const dataBoleto = parseDateToISO(b[campoData] || '');
       if (dataBoleto === hojeISO) {
         result.countHoje++;
         result.totalHoje += valor;
@@ -77,6 +85,56 @@ async function fetchBoletos(
   return result;
 }
 
+async function fetchAbertosAteHoje(
+  client: AxiosInstance,
+  mesReferente: string,
+  hojeISO: string,
+  hojeBR: string
+): Promise<MesResult> {
+  let result: MesResult = { count: 0, total: 0, countHoje: 0, totalHoje: 0 };
+  let page = 0;
+  let hasMore = true;
+
+  // Primeiro dia do mês em formato dd/mm/yyyy
+  const [mm, yyyy] = mesReferente.split('/');
+  const inicioBR = `01/${mm}/${yyyy}`;
+
+  while (hasMore) {
+    const response = await client.post('listar/boleto', {
+      codigo_situacao: 2,
+      data_vencimento_inicial: inicioBR,
+      data_vencimento_final: hojeBR,
+      inicio_paginacao: page,
+      quantidade_por_pagina: 5000,
+    }, { timeout: 300000 });
+
+    const data = response.data;
+    const boletos = Array.isArray(data) ? data : (data?.boletos ?? []);
+
+    for (const b of boletos) {
+      const valor = parseFloat(String(b.valor_boleto || '0').replace(',', '.')) || 0;
+
+      result.count++;
+      result.total += valor;
+
+      const venc = parseDateToISO(b.data_vencimento || '');
+      if (venc === hojeISO) {
+        result.countHoje++;
+        result.totalHoje += valor;
+      }
+    }
+
+    hasMore = boletos.length >= 5000;
+    page++;
+    if (page >= 10) hasMore = false;
+  }
+
+  console.log(
+    `[Provider] ABERTOS ate ${hojeBR}: ${result.count} boletos, ${result.countHoje} hoje, R$ ${result.total.toFixed(2)}`
+  );
+  return result;
+}
+
 export async function getMonthlyFinancials(
   client: AxiosInstance
 ): Promise<FinancialSummary> {
@@ -86,13 +144,14 @@ export async function getMonthlyFinancials(
   const yyyy = now.getFullYear();
   const mesRef = `${mm}/${yyyy}`;
   const hojeISO = `${yyyy}-${mm}-${dd}`;
+  const hojeBR = formatDateBR(now);
   const errors: string[] = [];
 
   let pagos: MesResult = { count: 0, total: 0, countHoje: 0, totalHoje: 0 };
   let abertos: MesResult = { count: 0, total: 0, countHoje: 0, totalHoje: 0 };
 
   try {
-    pagos = await fetchBoletos(client, 1, mesRef, hojeISO, 'BAIXADOS', 'data_pagamento', true);
+    pagos = await fetchBoletosMesReferente(client, 1, mesRef, hojeISO, 'BAIXADOS', 'data_pagamento', true);
   } catch (e: any) {
     if (e.response?.status !== 406) {
       console.error(`[Provider] Erro BAIXADOS: ${e.message}`);
@@ -101,7 +160,7 @@ export async function getMonthlyFinancials(
   }
 
   try {
-    abertos = await fetchBoletos(client, 2, mesRef, hojeISO, 'ABERTOS', 'data_vencimento', false);
+    abertos = await fetchBoletosMesReferente(client, 2, mesRef, hojeISO, 'ABERTOS', 'data_vencimento', false);
   } catch (e: any) {
     if (e.response?.status !== 406) {
       console.error(`[Provider] Erro ABERTOS: ${e.message}`);
