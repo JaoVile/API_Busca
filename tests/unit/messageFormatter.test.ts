@@ -1,10 +1,19 @@
-import { formatReportMessage } from '../../src/services/messageFormatter';
+import { formatReportMessage, DEFAULT_TEMPLATE } from '../../src/services/messageFormatter';
 
 const report = {
   totalAtivos: 1250,
   vendasHoje: 5,
   canceladosHoje: 2,
-  financeiro: { totalAberto: 50000, totalPago: 35000, percentualConversao: 70 },
+  financeiro: {
+    recebidoHoje: 5000,
+    qtdRecebidoHoje: 10,
+    abertoHoje: 3000,
+    qtdAbertoHoje: 6,
+    pagoMes: 30000,
+    qtdPagoMes: 60,
+    abertoMes: 20000,
+    qtdAbertoMes: 40,
+  },
   errors: [] as string[],
 };
 
@@ -17,14 +26,15 @@ describe('formatReportMessage', () => {
     expect(formatReportMessage('X', report)).toContain('1.250');
   });
 
-  it('pads single digits', () => {
+  it('shows daily and monthly sections', () => {
     const msg = formatReportMessage('X', report);
-    expect(msg).toContain('05');
-    expect(msg).toContain('02');
+    expect(msg).toContain('Financeiro do Dia');
+    expect(msg).toContain('Resumo do mês');
   });
 
-  it('shows percentage', () => {
-    expect(formatReportMessage('X', report)).toContain('70%');
+  it('shows percentages', () => {
+    const msg = formatReportMessage('X', report);
+    expect(msg).toContain('%');
   });
 
   it('shows warning if errors', () => {
@@ -34,5 +44,20 @@ describe('formatReportMessage', () => {
 
   it('no warning if clean', () => {
     expect(formatReportMessage('X', report)).not.toContain('erro(s)');
+  });
+
+  it('uses custom template when provided', () => {
+    const tpl = 'Olá {{empresa}} — Ativos: {{ativos}}';
+    const msg = formatReportMessage('Acme', report, tpl);
+    expect(msg).toBe('Olá Acme — Ativos: 1.250');
+  });
+
+  it('falls back to default when template is null', () => {
+    const msg = formatReportMessage('X', report, null);
+    expect(msg).toContain('Relatório Diário');
+  });
+
+  it('exports DEFAULT_TEMPLATE', () => {
+    expect(DEFAULT_TEMPLATE).toContain('{{empresa}}');
   });
 });

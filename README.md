@@ -1,188 +1,326 @@
-# API_Busca
+# API Busca
 
-Automacao de relatorios diarios via Provider para WhatsApp (Quepasa).
-Multi-tenant com isolamento de credenciais (AES-256-GCM).
+Multi-tenant SaaS que automatiza relatorios diarios: busca dados da API Provider SGA (gestao de veiculos), formata e envia via WhatsApp atraves do Quepasa.
 
-## Stack
+## Requisitos do Sistema
 
-- **Backend**: Node.js + Express + TypeScript
-- **Banco**: PostgreSQL (Docker) + Prisma ORM
-- **Auth**: JWT (bcryptjs + jsonwebtoken)
-- **Scheduler**: node-cron (19:00 BRT)
-- **APIs externas**: Provider SGA v2 + Quepasa (WhatsApp)
-- **Frontend**: HTML/CSS/JS (dark theme minimalista)
+- **Node.js** 18+ (recomendado 20+)
+- **Docker** e **Docker Compose** (para PostgreSQL e Quepasa)
+- **Git**
+- **npm** 9+
 
-## Arquitetura
+## Instalacao Passo a Passo
 
-```
-Frontend (public/)  -->  Express (Node+TS)  -->  PostgreSQL (Docker)
-                              |
-                    +---------+---------+
-                    |                   |
-              Provider API          Quepasa API
-              (dados)            (WhatsApp)
-```
-
-## Fluxo do Relatorio
-
-1. **Trigger**: Cron Job as 19:00 BRT (ou manual via dashboard)
-2. **Auth**: Recupera credenciais criptografadas do banco, autentica na Provider (2 etapas)
-3. **Fetch**: 4 consultas em paralelo (ativos, vendas, cancelamentos, financeiro)
-4. **Parse**: Calcula percentuais e formata valores
-5. **Dispatch**: Envia mensagem formatada via Quepasa (WhatsApp)
-6. **Log**: Registra resultado (SUCCESS / PARTIAL_FAILURE / FAILURE)
-
-## Setup
-
-### Pre-requisitos
-
-- Node.js 18+
-- Docker Desktop
-- Git
-
-### Instalacao
+### 1. Clonar o repositorio
 
 ```bash
 git clone https://github.com/JaoVile/API_Busca.git
 cd API_Busca
-cp .env.example .env          # preencher com suas chaves
-docker compose up -d           # sobe o PostgreSQL
-npm install
-npx prisma migrate dev --schema prisma/schema.prisma --config prisma/prisma.config.ts
-npm run dev
 ```
 
-### Variaveis de Ambiente (.env)
+### 2. Instalar dependencias
 
-| Variavel | Descricao |
-|----------|-----------|
-| `PORT` | Porta do servidor (default: 3000) |
-| `DATABASE_URL` | URL de conexao PostgreSQL |
-| `JWT_SECRET` | Chave secreta para assinar tokens JWT |
-| `ENCRYPTION_KEY` | 64 caracteres hex (32 bytes) para AES-256-GCM |
+```bash
+npm install
+```
 
-Para gerar chaves seguras:
+> O arquivo `.npmrc` ja contem `legacy-peer-deps=true` (necessario para Prisma 7 + ts-jest).
+
+### 3. Configurar variaveis de ambiente
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env`:
+
+```env
+PORT=3000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/api_busca
+JWT_SECRET=troque_por_uma_chave_segura_aleatoria
+ENCRYPTION_KEY=gere_com_o_comando_abaixo
+```
+
+**Gerar ENCRYPTION_KEY (64 caracteres hex = 32 bytes AES-256):**
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
+### 4. Subir o PostgreSQL via Docker
+
+```bash
+docker compose up -d
+```
+
+Isso sobe um container PostgreSQL na porta 5432.
+
+### 5. Executar migrations do Prisma
+
+```bash
+npx prisma migrate dev --config prisma/prisma.config.ts
+npx prisma generate --config prisma/prisma.config.ts
+```
+
+### 6. Iniciar o servidor de desenvolvimento
+
+```bash
+npm run dev
+```
+
+Acesse: **http://localhost:3000**
+
+### 7. Configurar o Quepasa (WhatsApp)
+
+O Quepasa e o servico que envia mensagens pelo WhatsApp. Voce precisa de uma instancia rodando.
+
+**Opcao A: Usar o Docker Compose do Quepasa**
+
+```bash
+cd ../quepasa/docker
+docker compose up -d
+```
+
+**Opcao B: Usar uma imagem pronta**
+
+```bash
+docker run -d --name quepasa -p 31000:31000 codeleaks/quepasa:latest
+```
+
+Apos subir:
+
+1. Acesse **http://localhost:31000**
+2. Crie uma conta ou faca login
+3. Escaneie o **QR Code** com o WhatsApp
+4. Copie o **Token do bot** gerado
+
+### 8. Configurar credenciais no Dashboard
+
+1. Acesse **http://localhost:3000**
+2. Cadastre uma conta (nome da empresa + email + senha)
+3. Clique em **"+ Nova Empresa"**
+4. Preencha:
+   - **Token Provider (SGA)**: gerado no menu Area Cliente > APIs > Gerenciar APIs do SGA
+   - **Usuario Provider**: usuario de integracao do SGA
+   - **Senha Provider**: senha do usuario de integracao
+   - **Token Quepasa**: token do bot copiado no passo 7
+   - **URL Quepasa**: `http://localhost:31000`
+   - **WhatsApp**: numero com DDI+DDD (ex: `5581999430696`)
+5. Clique em **"Testar Envio"** para validar
+
+### 9. Personalizar a mensagem (opcional)
+
+1. No dashboard, clique no botao **"Editar Mensagem"** (laranja)
+2. Edite o template usando variaveis `{{nomeVariavel}}`
+3. Clique nas **tags azuis** para inserir variaveis no cursor
+4. Acompanhe a **pre-visualizacao** em tempo real
+5. Clique em **"Salvar Template"**
+
+**Variaveis disponiveis:**
+
+| Variavel | Descricao | Exemplo |
+|----------|-----------|---------|
+| `{{empresa}}` | Nome da empresa | Minha Empresa |
+| `{{data}}` | Data atual | 02/04/2026 |
+| `{{mesAno}}` | Mes e ano | abril 2026 |
+| `{{ativos}}` | Veiculos ativos | 1.250 |
+| `{{vendasHoje}}` | Vendas do dia | 5 |
+| `{{canceladosHoje}}` | Cancelamentos do dia | 2 |
+| `{{recebidoHoje}}` | Valor recebido hoje | R$ 15.000,00 |
+| `{{qtdRecebidoHoje}}` | Qtd boletos recebidos hoje | 10 |
+| `{{abertoHoje}}` | Valor em aberto hoje | R$ 8.000,00 |
+| `{{qtdAbertoHoje}}` | Qtd boletos abertos hoje | 6 |
+| `{{pctRecebidoHoje}}` | % recebido no dia | 65.2% |
+| `{{pctAbertoHoje}}` | % aberto no dia | 34.8% |
+| `{{totalDia}}` | Total financeiro do dia | R$ 23.000,00 |
+| `{{pagoMes}}` | Total recebido no mes | R$ 120.000,00 |
+| `{{qtdPagoMes}}` | Qtd boletos pagos no mes | 60 |
+| `{{abertoMes}}` | Total em aberto no mes | R$ 80.000,00 |
+| `{{qtdAbertoMes}}` | Qtd boletos abertos no mes | 40 |
+| `{{pctPagoMes}}` | % pago no mes | 60.0% |
+| `{{pctAbertoMes}}` | % aberto no mes | 40.0% |
+| `{{totalMes}}` | Total geral do mes | R$ 200.000,00 |
+| `{{qtdTotalMes}}` | Qtd total boletos no mes | 100 |
+
+## Comandos
+
+```bash
+npm run dev        # Servidor com hot-reload (nodemon + ts-node)
+npm run build      # Compila TypeScript para dist/
+npm start          # Roda versao compilada (producao)
+npm test           # Executa testes com Jest
+```
+
+**Prisma:**
+
+```bash
+npx prisma migrate dev --config prisma/prisma.config.ts    # Aplicar migrations
+npx prisma generate --config prisma/prisma.config.ts       # Regenerar client
+npx prisma studio --config prisma/prisma.config.ts         # Interface visual do banco
+```
+
+## Arquitetura
+
+```
+Request -> Express Routes -> Controllers -> Services -> Provider API / Quepasa API
+                                              |
+                                       PostgreSQL (Prisma)
+```
+
+**Fluxo do Relatorio:**
+
+1. **Trigger** — Cron job (18:00 BRT) ou botao manual no dashboard
+2. **Auth** — Descriptografa credenciais do tenant (AES-256-GCM)
+3. **Fetch** — 4 consultas paralelas na Provider via `Promise.allSettled`:
+   - `POST listar/veiculo { codigo_situacao: 1 }` -> total de ativos
+   - `POST listar/veiculo { data_cadastro: hoje }` -> vendas do dia
+   - `POST listar/alteracao-veiculos { data: hoje }` -> cancelamentos do dia
+   - `POST listar/boleto { mes_referente: MM/YYYY }` -> financeiro (pagos + abertos do mes)
+4. **Parse** — Aplica template customizavel com variaveis `{{...}}`, calcula percentuais, formata valores em pt-BR
+5. **Dispatch** — Envia mensagem formatada via Quepasa (WhatsApp)
+6. **Log** — Registra resultado (SUCCESS / PARTIAL_FAILURE / FAILURE) no banco
+
+**Dados diarios vs mensais:**
+
+Os dados financeiros do dia sao extraidos da mesma consulta mensal (`mes_referente`), comparando `data_pagamento` (para recebidos) e `data_vencimento` (para abertos) com a data atual. Isso evita chamadas de API adicionais.
+
 ## Endpoints da API
 
-### Publicos (sem autenticacao)
+### Publicos
 
 | Metodo | Rota | Descricao |
 |--------|------|-----------|
-| POST | `/api/auth/register` | Cadastro de empresa |
+| POST | `/api/auth/register` | Cadastro de tenant |
 | POST | `/api/auth/login` | Login (retorna JWT) |
 | GET | `/api/health` | Health check |
 
-### Protegidos (requer Bearer Token)
+### Protegidos (Bearer Token)
 
 | Metodo | Rota | Descricao |
 |--------|------|-----------|
-| PUT | `/api/credentials` | Salvar tokens (Provider + Quepasa) |
-| GET | `/api/credentials/status` | Ver configuracao atual |
-| GET | `/api/reports/last-status` | Ultimo envio de relatorio |
+| PUT | `/api/credentials` | Salvar/atualizar credenciais e template |
+| GET | `/api/credentials/status` | Status das credenciais (inclui template) |
+| DELETE | `/api/credentials` | Remover credenciais |
+| POST | `/api/reports/trigger` | Disparar relatorio manual |
+| GET | `/api/reports/last-status` | Ultimo relatorio |
 | GET | `/api/reports/history` | Historico de envios |
-| POST | `/api/reports/trigger` | Disparar relatorio manualmente |
 
-### Exemplo de uso com curl
+### Exemplos com curl
 
 ```bash
-# 1. Registrar empresa
+# Cadastrar
 curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"companyName":"Minha Empresa","email":"admin@empresa.com","password":"123456"}'
 
-# 2. Login
+# Login
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@empresa.com","password":"123456"}'
-# Copie o token retornado
 
-# 3. Configurar credenciais
+# Salvar credenciais (usar token do login)
 curl -X PUT http://localhost:3000/api/credentials \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Authorization: Bearer SEU_TOKEN_JWT" \
   -d '{
-    "providerToken":"token_sga_provider",
-    "providerUser":"usuario_provider",
-    "providerPass":"senha_provider",
-    "quepasaToken":"token_quepasa",
+    "providerToken":"token_do_sga",
+    "providerUser":"usuario",
+    "providerPass":"senha",
+    "quepasaToken":"token_do_bot",
     "quepasaBaseUrl":"http://localhost:31000",
     "whatsappNumber":"5511999999999"
   }'
 
-# 4. Disparar relatorio
+# Salvar template customizado
+curl -X PUT http://localhost:3000/api/credentials \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_TOKEN_JWT" \
+  -d '{"messageTemplate":"📊 {{empresa}} — {{data}}\nAtivos: {{ativos}}\nRecebido: {{pagoMes}} ({{pctPagoMes}})"}'
+
+# Disparar relatorio
 curl -X POST http://localhost:3000/api/reports/trigger \
-  -H "Authorization: Bearer SEU_TOKEN"
+  -H "Authorization: Bearer SEU_TOKEN_JWT"
 ```
 
-## Frontend
-
-Acesse `http://localhost:3000` no navegador:
-
-- **Tela de Login**: cadastro e login de empresas
-- **Dashboard**: configurar credenciais, testar envio, ver status
-
-## Credenciais necessarias
-
-### Provider (API SGA v2)
-- **Token SGA**: gerado no painel Provider (Area Cliente > APIs > Gerenciar APIs)
-- **Usuario**: usuario ativo do sistema SGA
-- **Senha**: senha de acesso do SGA
-
-A autenticacao e feita em 2 etapas:
-1. POST `/usuario/autenticar` com Token SGA no header + usuario/senha no body
-2. Retorna `token_usuario` (nao expira) usado nas demais requisicoes
-
-### Quepasa (WhatsApp)
-- **Token**: token de acesso da instancia Quepasa
-- **URL Base**: endereco do servidor Quepasa (ex: `http://localhost:31000`)
-
-## Exemplo de Mensagem Gerada
+## Exemplo de Mensagem (template padrao)
 
 ```
-📊 *Relatorio Diario - Nome da Empresa*
+📊 Relatório Diário — Atomos
+📅 02/04/2026
 
-🚗 Ativos Totais: 1.250
-✅ Vendas hoje: 05
-❌ Cancelados hoje: 02
+🚗 Resumo do Dia
+  • Ativos: 7.830
+  • Vendas hoje: 10
+  • Cancelados hoje: 4
 
-💰 *Financeiro Mensal:*
-  • Aberto: R$ 50.000,00
-  • Pago: R$ 35.000,00 (70%)
+📋 Financeiro do Dia
+  • Recebido: R$ 15.000,00 (10 boletos) — 65.2%
+  • Em aberto: R$ 8.000,00 (6 boletos) — 34.8%
+
+💰 Resumo do mês — abril 2026
+  • Total recebido: R$ 120.000,00 (60 boletos) — 60.0%
+  • Total em aberto: R$ 80.000,00 (40 boletos) — 40.0%
+  • Total geral: R$ 200.000,00 (100 boletos)
 ```
 
-## Testes
+## Estrutura de Pastas
 
-```bash
-npm test
+```
+src/
+  controllers/       # Controladores Express
+  database/          # Prisma client
+  jobs/              # Scheduler (cron) e pipeline de relatorio
+  middlewares/       # Auth JWT middleware
+  routes/            # Rotas Express
+  services/          # Logica de negocio
+    provider/          # Integracao Provider (auth, veiculos, boletos, cancelamentos)
+    quepasa/         # Envio WhatsApp
+  utils/             # Encryption, date helpers
+  config/            # Validacao de env vars
+public/
+  index.html         # Login / Cadastro
+  dashboard.html     # Painel principal (com editor de template)
+  css/               # Estilos
+  js/                # Scripts do frontend
+prisma/
+  schema.prisma      # Schema do banco
+  prisma.config.ts   # Config Prisma 7 (datasource URL)
+tests/
+  unit/              # Testes unitarios
+  integration/       # Testes de integracao
 ```
 
-## Scripts disponiveis
+## Banco de Dados
 
-| Script | Comando | Descricao |
-|--------|---------|-----------|
-| `npm run dev` | `nodemon` | Desenvolvimento (auto-reload) |
-| `npm run build` | `tsc` | Compila TypeScript |
-| `npm start` | `node dist/server.js` | Producao |
-| `npm test` | `jest` | Roda testes |
+3 modelos no PostgreSQL via Prisma 7:
 
-## Requisitos atendidos
+- **Tenant** — Empresa cadastrada (id, email, senha hash)
+- **TenantCredentials** — Tokens criptografados (AES-256-GCM), template de mensagem, 1:1 com Tenant
+- **ReportLog** — Historico de envios (status, mensagem, erro) 1:N com Tenant
 
-| Codigo | Descricao | Status |
-|--------|-----------|--------|
-| RF01 | Cadastro de Tenant | Implementado |
-| RF02 | Configuracao de Credenciais | Implementado |
-| RF03 | Coleta de Ativos | Implementado |
-| RF04 | Relatorio de Vendas | Implementado |
-| RF05 | Monitoramento de Cancelamentos | Implementado |
-| RF06 | Resumo Financeiro | Implementado |
-| RF07 | Formatacao de Mensagem | Implementado |
-| RF08 | Disparo via Quepasa | Implementado |
-| RNF01 | Isolamento de Credenciais (AES-256) | Implementado |
-| RNF02 | Periodicidade (Cron 19:00 BRT) | Implementado |
-| RNF03 | Simplicidade de Interface | Implementado |
-| RNF04 | Tratamento de Erros de API | Implementado |
-| RN01 | Boletos do mes inteiro (dia 01 ao ultimo dia) | Implementado |
+## Seguranca
+
+- Senhas: **bcryptjs** com 12 rounds de salt
+- Tokens: **AES-256-GCM** com IV unico por criptografia
+- Autenticacao: **JWT** com expiracao de 7 dias
+- Isolamento: cada tenant so acessa suas proprias credenciais
+
+## Requisitos Implementados
+
+- [x] RF01 — Cadastro de Tenant com UUID unico
+- [x] RF02 — Configuracao de credenciais (Provider + Quepasa + WhatsApp)
+- [x] RF03 — Coleta de veiculos ativos
+- [x] RF04 — Vendas do dia (veiculos cadastrados hoje)
+- [x] RF05 — Cancelamentos do dia (alteracoes para status CANCELADO)
+- [x] RF06 — Financeiro do mes atual (boletos pagos + abertos via mes_referente, com dados diarios)
+- [x] RF07 — Mensagem formatada com template customizavel e variaveis
+- [x] RF08 — Envio via Quepasa (WhatsApp)
+- [x] RNF01 — Isolamento de credenciais com criptografia
+- [x] RNF02 — Job scheduler (cron 18:00 BRT)
+- [x] RNF03 — Interface minimalista (dark theme) com editor de mensagem
+- [x] RNF04 — Log de erros por envio
+- [x] RN01 — Boletos filtrados por mes_referente (somente mes corrente)
+
+## Stack
+
+Node.js | Express 5 | TypeScript | PostgreSQL | Prisma 7 | JWT | AES-256-GCM | node-cron | Axios | Jest

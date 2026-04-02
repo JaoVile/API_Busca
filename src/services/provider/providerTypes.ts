@@ -1,7 +1,12 @@
 export interface FinancialSummary {
-  totalAberto: number;
-  totalPago: number;
-  percentualConversao: number;
+  recebidoHoje: number;
+  qtdRecebidoHoje: number;
+  abertoHoje: number;
+  qtdAbertoHoje: number;
+  pagoMes: number;
+  qtdPagoMes: number;
+  abertoMes: number;
+  qtdAbertoMes: number;
 }
 
 export interface ProviderReport {

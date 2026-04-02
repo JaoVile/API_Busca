@@ -27,8 +27,8 @@ export async function runReportForTenant(tenantId: string): Promise<void> {
     // 2. FETCH - buscar dados da Provider
     const report = await fetchProviderReport(creds.providerToken, creds.providerUser, creds.providerPass);
 
-    // 3. PARSE - formatar mensagem
-    const message = formatReportMessage(tenant!.companyName, report);
+    // 3. PARSE - formatar mensagem (usa template customizado se houver)
+    const message = formatReportMessage(tenant!.companyName, report, creds.messageTemplate);
     console.log(`[PIPELINE] Mensagem gerada para ${tenant!.companyName}`);
 
     // 4. DISPATCH - enviar via WhatsApp (mesmo com erros parciais)

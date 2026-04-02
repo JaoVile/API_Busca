@@ -3,12 +3,148 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API_Busca — Login</title>
-  <link rel="stylesheet" href="/css/style.css" />
+  <title>API Busca — Acesso</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0a0f1e;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(16,185,129,0.06) 0%, transparent 50%);
+    }
+
+    .login-card {
+      background: #111827;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .logo h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo p {
+      color: #64748b;
+      font-size: 0.85rem;
+      margin-top: 0.3rem;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: #0a0f1e;
+      border-radius: 8px;
+      padding: 3px;
+      margin-bottom: 1.5rem;
+    }
+    .tabs button {
+      flex: 1;
+      padding: 0.6rem;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #64748b;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tabs button.active {
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+
+    /* Form */
+    label {
+      display: block;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-bottom: 0.3rem;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      margin-bottom: 0.85rem;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      background: #0a0f1e;
+      color: #e2e8f0;
+      font-size: 0.92rem;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+    input::placeholder { color: #475569; }
+
+    .btn-primary {
+      width: 100%;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-green {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+
+    .msg {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      min-height: 1.2rem;
+      color: #f87171;
+    }
+
+    .hidden { display: none; }
+
+    .footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #1e293b;
+      color: #475569;
+      font-size: 0.75rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="card">
-    <h1>API_Busca</h1>
+  <div class="login-card">
+    <div class="logo">
+      <h1>API Busca</h1>
+      <p>Automacao de relatorios Provider + WhatsApp</p>
+    </div>
 
     <div class="tabs">
       <button class="active" onclick="showTab('login')">Entrar</button>
@@ -16,19 +152,28 @@
     </div>
 
     <form id="login-form" onsubmit="handleLogin(event)">
-      <input type="email" id="login-email" placeholder="Email" required />
-      <input type="password" id="login-pass" placeholder="Senha" required />
-      <button type="submit">Entrar</button>
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" required />
+      <label for="login-pass">Senha</label>
+      <input type="password" id="login-pass" placeholder="Sua senha" required />
+      <button type="submit" class="btn-primary">Entrar</button>
     </form>
 
     <form id="register-form" class="hidden" onsubmit="handleRegister(event)">
-      <input type="text" id="reg-company" placeholder="Nome da Empresa" required />
-      <input type="email" id="reg-email" placeholder="Email" required />
-      <input type="password" id="reg-pass" placeholder="Senha (min 6)" minlength="6" required />
-      <button type="submit">Cadastrar</button>
+      <label for="reg-company">Nome da Empresa</label>
+      <input type="text" id="reg-company" placeholder="Ex: Minha Associacao" required />
+      <label for="reg-email">Email</label>
+      <input type="email" id="reg-email" placeholder="contato@empresa.com" required />
+      <label for="reg-pass">Senha</label>
+      <input type="password" id="reg-pass" placeholder="Minimo 6 caracteres" minlength="6" required />
+      <button type="submit" class="btn-primary btn-green">Criar Conta</button>
     </form>
 
     <p class="msg" id="message"></p>
+
+    <div class="footer">
+      Multi-tenant SaaS &mdash; Dados criptografados com AES-256-GCM
+    </div>
   </div>
 
   <script src="/js/auth.js"></script>

@@ -5,25 +5,24 @@ import { getTodayCancellations } from './getTodayCancellations';
 import { getMonthlyFinancials } from './getMonthlyFinancials';
 import { ProviderReport, FinancialSummary } from './providerTypes';
 
-/**
- * Orquestra todas as chamadas Provider em paralelo
- * 1. Autentica (token SGA + user + pass → token_usuario)
- * 2. Faz as 4 consultas em paralelo com Promise.allSettled
- */
 export async function fetchProviderReport(
   providerToken: string,
   usuario: string,
   senha: string
 ): Promise<ProviderReport> {
-  // Etapa 1: autenticar e obter token_usuario
   const tokenUsuario = await authenticateProvider(providerToken, usuario, senha);
   const client = createProviderClient(tokenUsuario);
 
   const errors: string[] = [];
   const defaultFin: FinancialSummary = {
-    totalAberto: 0,
-    totalPago: 0,
-    percentualConversao: 0,
+    recebidoHoje: 0,
+    qtdRecebidoHoje: 0,
+    abertoHoje: 0,
+    qtdAbertoHoje: 0,
+    pagoMes: 0,
+    qtdPagoMes: 0,
+    abertoMes: 0,
+    qtdAbertoMes: 0,
   };
 
   let totalAtivos = 0;
@@ -31,7 +30,6 @@ export async function fetchProviderReport(
   let canceladosHoje = 0;
   let financeiro = defaultFin;
 
-  // Etapa 2: 4 consultas em paralelo
   const [r1, r2, r3, r4] = await Promise.allSettled([
     getActiveVehicles(client),
     getTodaySales(client),

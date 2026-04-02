@@ -8,6 +8,7 @@ export interface CredentialsInput {
   quepasaToken: string;
   quepasaBaseUrl?: string;
   whatsappNumber: string;
+  messageTemplate?: string;
 }
 
 export interface CredentialsDecrypted {
@@ -17,11 +18,12 @@ export interface CredentialsDecrypted {
   quepasaToken: string;
   quepasaBaseUrl: string;
   whatsappNumber: string;
+  messageTemplate: string | null;
 }
 
 export class CredentialsService {
+  /** Salva todas as credenciais (primeiro cadastro) */
   async upsert(tenantId: string, data: CredentialsInput) {
-    // Criptografa os tokens antes de salvar
     const encrypted = {
       providerTokenEncrypted: encrypt(data.providerToken),
       providerUserEncrypted: encrypt(data.providerUser),
@@ -33,11 +35,44 @@ export class CredentialsService {
 
     return prisma.tenantCredentials.upsert({
       where: { tenantId },
-      update: encrypted, // Se já existe, atualiza
-      create: {          // Se não existe, cria
-        tenantId,
-        ...encrypted,
-      },
+      update: encrypted,
+      create: { tenantId, ...encrypted },
+    });
+  }
+
+  /** Atualiza apenas os campos enviados (edição parcial) */
+  async upsertPartial(tenantId: string, data: Partial<CredentialsInput>) {
+    const existing = await prisma.tenantCredentials.findUnique({ where: { tenantId } });
+
+    const update: Record<string, string> = {};
+
+    if (data.providerToken) update.providerTokenEncrypted = encrypt(data.providerToken);
+    if (data.providerUser) update.providerUserEncrypted = encrypt(data.providerUser);
+    if (data.providerPass) update.providerPassEncrypted = encrypt(data.providerPass);
+    if (data.quepasaToken) update.quepasaTokenEncrypted = encrypt(data.quepasaToken);
+    if (data.quepasaBaseUrl) update.quepasaBaseUrl = data.quepasaBaseUrl;
+    if (data.whatsappNumber) update.whatsappNumber = data.whatsappNumber;
+    if (data.messageTemplate !== undefined) update.messageTemplate = data.messageTemplate;
+
+    if (!existing) {
+      // Primeiro cadastro — precisa ter tudo
+      return prisma.tenantCredentials.create({
+        data: {
+          tenantId,
+          providerTokenEncrypted: update.providerTokenEncrypted || encrypt(''),
+          providerUserEncrypted: update.providerUserEncrypted || encrypt(''),
+          providerPassEncrypted: update.providerPassEncrypted || encrypt(''),
+          quepasaTokenEncrypted: update.quepasaTokenEncrypted || encrypt(''),
+          quepasaBaseUrl: update.quepasaBaseUrl || 'http://localhost:31000',
+          whatsappNumber: update.whatsappNumber || '',
+        },
+      });
+    }
+
+    // Update parcial — só muda o que foi enviado
+    return prisma.tenantCredentials.update({
+      where: { tenantId },
+      data: update,
     });
   }
 
@@ -47,7 +82,6 @@ export class CredentialsService {
     });
     if (!creds) return null;
 
-    // Descriptografa os tokens pra usar na API
     return {
       providerToken: decrypt(creds.providerTokenEncrypted),
       providerUser: decrypt(creds.providerUserEncrypted),
@@ -55,18 +89,34 @@ export class CredentialsService {
       quepasaToken: decrypt(creds.quepasaTokenEncrypted),
       quepasaBaseUrl: creds.quepasaBaseUrl,
       whatsappNumber: creds.whatsappNumber,
+      messageTemplate: creds.messageTemplate,
     };
   }
 
   async getStatus(tenantId: string) {
-    // Retorna só dados públicos (sem tokens)
-    return prisma.tenantCredentials.findUnique({
+    const creds = await prisma.tenantCredentials.findUnique({
       where: { tenantId },
-      select: {
-        whatsappNumber: true,
-        quepasaBaseUrl: true,
-        updatedAt: true,
-      },
+    });
+    if (!creds) return null;
+
+    let providerUser = '';
+    try { providerUser = decrypt(creds.providerUserEncrypted); } catch {}
+
+    return {
+      whatsappNumber: creds.whatsappNumber,
+      quepasaBaseUrl: creds.quepasaBaseUrl,
+      providerUser,
+      hasProviderToken: !!creds.providerTokenEncrypted,
+      hasProviderPass: !!creds.providerPassEncrypted,
+      hasQuepasaToken: !!creds.quepasaTokenEncrypted,
+      messageTemplate: creds.messageTemplate,
+      updatedAt: creds.updatedAt,
+    };
+  }
+
+  async remove(tenantId: string) {
+    return prisma.tenantCredentials.deleteMany({
+      where: { tenantId },
     });
   }
 }

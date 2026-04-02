@@ -43,6 +43,6 @@ export function createProviderClient(tokenUsuario: string): AxiosInstance {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${tokenUsuario}`,
     },
-    timeout: 30000,
+    timeout: 30000, // 30s padrão para chamadas rápidas
   });
 }

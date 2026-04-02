@@ -30,6 +30,7 @@ model TenantCredentials {
   quepasaTokenEncrypted String   @map("quepasa_token_encrypted")
   quepasaBaseUrl        String   @default("http://localhost:31000") @map("quepasa_base_url")
   whatsappNumber        String   @map("whatsapp_number")
+  messageTemplate       String?  @map("message_template")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 

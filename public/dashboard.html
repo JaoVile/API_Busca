@@ -3,100 +3,587 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — API_Busca</title>
-  <link rel="stylesheet" href="/css/style.css" />
+  <title>Dashboard — API Busca</title>
   <style>
-    body { align-items: flex-start; padding: 2rem 1rem; }
-    .container { width: 100%; max-width: 600px; }
-    .section { background: #1e293b; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; }
-    .section h3 { margin-bottom: 1rem; font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .log-item { background: #0f172a; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem; }
-    .log-item .status { font-weight: bold; }
-    .log-item .error { color: #f87171; font-size: 0.8rem; margin-top: 0.25rem; word-break: break-all; }
-    .log-item .date { color: #64748b; font-size: 0.75rem; }
-    .status-SUCCESS { color: #34d399; }
-    .status-PARTIAL_FAILURE { color: #fbbf24; }
-    .status-FAILURE { color: #f87171; }
-    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-    .badge-ok { background: #065f46; color: #34d399; }
-    .badge-err { background: #7f1d1d; color: #f87171; }
-    .badge-none { background: #334155; color: #94a3b8; }
-    .info-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #334155; font-size: 0.9rem; }
-    .info-row:last-child { border: none; }
-    .info-label { color: #94a3b8; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0a0f1e;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 1.5rem;
+      background-image:
+        radial-gradient(ellipse at 10% 0%, rgba(59,130,246,0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 90% 100%, rgba(16,185,129,0.04) 0%, transparent 50%);
+    }
+    .wrap { max-width: 740px; margin: 0 auto; }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #1e293b;
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 0.75rem; }
+    .topbar-brand h1 {
+      font-size: 1.3rem; font-weight: 700;
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .topbar-brand span { font-size: 0.7rem; color: #475569; background: #1e293b; padding: 0.2rem 0.5rem; border-radius: 4px; }
+    .topbar-btns { display: flex; gap: 0.5rem; }
+
+    /* ── Buttons ── */
+    button {
+      padding: 0.5rem 1rem; border: none; border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      color: #fff; transition: all 0.15s;
+    }
+    button:hover { opacity: 0.88; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .bg-green { background: linear-gradient(135deg, #059669, #047857); }
+    .bg-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .bg-gray { background: #334155; }
+    .bg-red { background: #991b1b; }
+    .bg-dark { background: #1e293b; border: 1px solid #334155; }
+    .bg-amber { background: linear-gradient(135deg, #d97706, #b45309); }
+
+    /* ── Card ── */
+    .card {
+      background: #111827; border: 1px solid #1e293b;
+      border-radius: 12px; margin-bottom: 1rem; overflow: hidden;
+    }
+
+    /* ── Company header ── */
+    .c-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.25rem 1.5rem;
+      background: linear-gradient(135deg, rgba(59,130,246,0.05), rgba(16,185,129,0.03));
+      border-bottom: 1px solid #1e293b;
+    }
+    .c-head h2 { font-size: 1.2rem; display: flex; align-items: center; gap: 0.6rem; font-weight: 700; }
+    .c-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    /* ── Badge ── */
+    .badge {
+      font-size: 0.65rem; padding: 0.2rem 0.6rem; border-radius: 20px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .b-ok { background: rgba(16,185,129,0.15); color: #34d399; }
+    .b-warn { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .b-err { background: rgba(248,113,113,0.15); color: #f87171; }
+    .b-none { background: #1e293b; color: #64748b; }
+
+    /* ── Stats grid ── */
+    .stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+      background: #1e293b;
+    }
+    .stat-item {
+      background: #0d1321; padding: 0.9rem 1rem; text-align: center;
+    }
+    .stat-label {
+      color: #64748b; font-size: 0.62rem; text-transform: uppercase;
+      letter-spacing: 0.8px; font-weight: 600; margin-bottom: 0.3rem;
+    }
+    .stat-val { font-weight: 700; font-size: 0.88rem; }
+
+    /* ── Message feedback ── */
+    .card-msg {
+      text-align: center; padding: 0.75rem 1rem; font-size: 0.85rem;
+      background: rgba(251,191,36,0.05); border-bottom: 1px solid #1e293b;
+    }
+    .card-msg:empty { display: none; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 0.7rem; color: #64748b; text-transform: uppercase;
+      letter-spacing: 1px; font-weight: 700; padding: 1rem 1.5rem 0.5rem;
+    }
+
+    /* ── Report detail ── */
+    .detail { padding: 0 1.5rem 1rem; }
+    .row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.55rem 0; border-bottom: 1px solid rgba(30,41,59,0.5); font-size: 0.88rem;
+    }
+    .row:last-child { border: none; }
+    .row-label { color: #64748b; font-size: 0.82rem; }
+    .row-col { flex-direction: column; align-items: flex-start; }
+    .row-col .row-label { margin-bottom: 0.4rem; }
+    pre.msg-text {
+      color: #94a3b8; font-size: 0.78rem; white-space: pre-wrap;
+      margin-top: 0.3rem; font-family: inherit; line-height: 1.6;
+      background: #0a0f1e; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b;
+    }
+    .err-text {
+      color: #f87171; font-size: 0.82rem; margin-top: 0.3rem;
+      word-break: break-all; background: rgba(248,113,113,0.05);
+      padding: 0.5rem; border-radius: 6px;
+    }
+
+    /* ── Status colors ── */
+    .s-SUCCESS { color: #34d399; }
+    .s-PARTIAL_FAILURE { color: #fbbf24; }
+    .s-FAILURE { color: #f87171; }
+
+    /* ── Footer actions ── */
+    .c-foot { padding: 0.75rem 1.5rem 1.25rem; display: flex; gap: 0.5rem; }
+    .c-foot button { flex: 1; }
+
+    /* ── Modal ── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      z-index: 100; justify-content: center; align-items: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: #111827; border: 1px solid #1e293b;
+      border-radius: 12px; padding: 2rem; width: 92%; max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { text-align: center; margin-bottom: 1.5rem; font-size: 1.1rem; }
+    label {
+      display: block; font-size: 0.78rem; color: #94a3b8;
+      margin-bottom: 0.25rem; font-weight: 500;
+    }
+    input, textarea {
+      width: 100%; padding: 0.65rem 0.85rem; margin-bottom: 0.7rem;
+      border-radius: 8px; border: 1px solid #1e293b; background: #0a0f1e;
+      color: #e2e8f0; font-size: 0.9rem; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    input::placeholder, textarea::placeholder { color: #475569; }
+    textarea { font-family: 'Courier New', monospace; font-size: 0.82rem; line-height: 1.5; resize: vertical; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .modal button { width: 100%; margin-top: 0.5rem; }
+    .modal-msg { text-align: center; font-size: 0.85rem; min-height: 1.2rem; margin-top: 0.75rem; }
+
+    /* ── History modal ── */
+    .log-item {
+      background: #0a0f1e; border: 1px solid #1e293b;
+      padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.82rem;
+    }
+    .log-item .err { color: #f87171; font-size: 0.75rem; margin-top: 0.3rem; word-break: break-all; }
+
+    /* ── Hint ── */
+    .field-hint { font-size: 0.68rem; color: #10b981; font-weight: 400; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center; padding: 4rem 1.5rem;
+      background: linear-gradient(135deg, rgba(59,130,246,0.03), rgba(16,185,129,0.02));
+    }
+    .empty h3 { color: #94a3b8; margin-bottom: 0.5rem; font-size: 1.1rem; }
+    .empty p { color: #64748b; font-size: 0.9rem; }
+
+    /* ── Template editor ── */
+    .tpl-vars {
+      display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.75rem;
+    }
+    .tpl-var {
+      font-size: 0.68rem; padding: 0.2rem 0.5rem; border-radius: 4px;
+      background: #1e293b; color: #3b82f6; cursor: pointer; border: 1px solid #334155;
+      transition: all 0.15s;
+    }
+    .tpl-var:hover { background: #334155; color: #60a5fa; }
+    .tpl-preview {
+      background: #0a0f1e; border: 1px solid #1e293b; border-radius: 8px;
+      padding: 1rem; font-size: 0.78rem; line-height: 1.6; color: #94a3b8;
+      white-space: pre-wrap; font-family: inherit; max-height: 300px; overflow-y: auto;
+    }
+    .tpl-section { margin-bottom: 0.5rem; }
+    .tpl-section summary {
+      font-size: 0.75rem; color: #64748b; cursor: pointer; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .c-head { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+      .topbar { flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+      .c-foot { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="section" style="text-align:center;">
-      <h2 id="company-name">Carregando...</h2>
-      <span class="badge badge-none" id="cred-badge">Verificando...</span>
+<div class="wrap">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <h1>API Busca</h1>
+      <span>v1.1</span>
     </div>
-
-    <!-- Status do ultimo envio -->
-    <div class="section">
-      <h3>Ultimo Relatorio</h3>
-      <div id="last-status-detail">Carregando...</div>
+    <div class="topbar-btns">
+      <button class="bg-green" onclick="openModal()">+ Nova Empresa</button>
+      <button class="bg-gray" onclick="logout()">Sair</button>
     </div>
-
-    <!-- Acoes rapidas -->
-    <div class="section">
-      <h3>Acoes</h3>
-      <div class="grid-2">
-        <button class="btn-success" onclick="triggerReport()">Testar Envio</button>
-        <button onclick="loadHistory()">Ver Historico</button>
-      </div>
-      <p class="msg" id="dash-msg"></p>
-    </div>
-
-    <!-- Credenciais -->
-    <div class="section">
-      <h3>Configurar Credenciais</h3>
-      <form id="cred-form" onsubmit="saveCredentials(event)">
-        <label>Token Provider (SGA)</label>
-        <input type="password" id="provider-token" placeholder="Cole o token da Provider" required />
-
-        <div class="grid-2">
-          <div>
-            <label>Usuario Provider</label>
-            <input type="text" id="provider-user" placeholder="Ex: Atomos.dev" required />
-          </div>
-          <div>
-            <label>Senha Provider</label>
-            <input type="password" id="provider-pass" placeholder="Senha do SGA" required />
-          </div>
-        </div>
-
-        <label>Token Quepasa</label>
-        <input type="password" id="quepasa-token" placeholder="Cole o token da Quepasa" required />
-
-        <div class="grid-2">
-          <div>
-            <label>URL Base Quepasa</label>
-            <input type="text" id="quepasa-url" value="http://localhost:31000" />
-          </div>
-          <div>
-            <label>WhatsApp</label>
-            <input type="text" id="whatsapp" placeholder="5511999999999" required />
-          </div>
-        </div>
-
-        <button type="submit">Salvar Credenciais</button>
-      </form>
-    </div>
-
-    <!-- Historico -->
-    <div class="section" id="history-section" style="display:none;">
-      <h3>Historico de Envios</h3>
-      <div id="history-list"></div>
-    </div>
-
-    <!-- Logout -->
-    <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
+  <div id="app"></div>
+</div>
 
-  <script src="/js/dashboard.js"></script>
+<!-- Credentials Modal -->
+<div class="overlay" id="cred-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Configurar Credenciais</h3>
+    <form id="cred-form" onsubmit="saveCreds(event)">
+      <label>Token Provider (SGA) <span id="f-ht-hint" class="field-hint"></span></label>
+      <input type="password" id="f-ht" placeholder="Cole o token gerado no SGA" />
+      <div class="grid2">
+        <div><label>Usuario Provider</label><input type="text" id="f-hu" placeholder="Ex: Atomos.dev" /></div>
+        <div><label>Senha Provider <span id="f-hp-hint" class="field-hint"></span></label><input type="password" id="f-hp" placeholder="Senha do SGA" /></div>
+      </div>
+      <label>Token Quepasa <span id="f-qt-hint" class="field-hint"></span></label>
+      <input type="password" id="f-qt" placeholder="Token do bot Quepasa" />
+      <div class="grid2">
+        <div><label>URL Quepasa</label><input type="text" id="f-qu" value="http://localhost:31000" /></div>
+        <div><label>WhatsApp (com DDI+DDD)</label><input type="text" id="f-wn" placeholder="5511999999999" /></div>
+      </div>
+      <p style="font-size:0.72rem;color:#475569;margin:0.5rem 0 0;" id="edit-hint"></p>
+      <button type="submit" class="bg-green">Salvar Credenciais</button>
+      <button type="button" class="bg-gray" onclick="closeModal()">Cancelar</button>
+      <div class="modal-msg" id="modal-msg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- Template Editor Modal -->
+<div class="overlay" id="tpl-overlay">
+  <div class="modal" style="max-width:640px;">
+    <h3>Editar Modelo da Mensagem</h3>
+
+    <label>Variaveis disponiveis <span class="field-hint">(clique para inserir)</span></label>
+    <div class="tpl-vars" id="tpl-vars"></div>
+
+    <label>Template da mensagem</label>
+    <textarea id="tpl-editor" rows="16" placeholder="Escreva o modelo da mensagem..."></textarea>
+
+    <details class="tpl-section" open>
+      <summary>Pre-visualizacao</summary>
+      <div class="tpl-preview" id="tpl-preview"></div>
+    </details>
+
+    <button type="button" class="bg-green" onclick="saveTemplate()">Salvar Template</button>
+    <button type="button" class="bg-blue" onclick="resetTemplate()">Restaurar Padrao</button>
+    <button type="button" class="bg-gray" onclick="closeTpl()">Cancelar</button>
+    <div class="modal-msg" id="tpl-msg"></div>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div class="overlay" id="hist-overlay">
+  <div class="modal" style="max-width:580px;">
+    <h3>Historico de Envios</h3>
+    <div id="hist-list" style="max-height:60vh;overflow-y:auto;"></div>
+    <button type="button" class="bg-gray" onclick="closeHist()" style="margin-top:1rem;">Fechar</button>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = '/';
+const company = localStorage.getItem('companyName') || 'Empresa';
+
+async function api(path, opts = {}) {
+  return fetch('/api' + path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(opts.headers||{}) },
+  });
+}
+
+let cred = null, last = null;
+
+// ── Template variables ──
+const TEMPLATE_VARS = [
+  { key: 'empresa', label: 'Empresa', example: 'Minha Empresa' },
+  { key: 'data', label: 'Data', example: '02/04/2026' },
+  { key: 'mesAno', label: 'Mes/Ano', example: 'abril 2026' },
+  { key: 'ativos', label: 'Ativos', example: '1.250' },
+  { key: 'vendasHoje', label: 'Vendas hoje', example: '5' },
+  { key: 'canceladosHoje', label: 'Cancelados hoje', example: '2' },
+  { key: 'recebidoHoje', label: 'Recebido hoje R$', example: 'R$ 15.000,00' },
+  { key: 'qtdRecebidoHoje', label: 'Qtd recebido hoje', example: '10' },
+  { key: 'abertoHoje', label: 'Aberto hoje R$', example: 'R$ 8.000,00' },
+  { key: 'qtdAbertoHoje', label: 'Qtd aberto hoje', example: '6' },
+  { key: 'pctRecebidoHoje', label: '% recebido dia', example: '65.2%' },
+  { key: 'pctAbertoHoje', label: '% aberto dia', example: '34.8%' },
+  { key: 'totalDia', label: 'Total dia R$', example: 'R$ 23.000,00' },
+  { key: 'pagoMes', label: 'Pago mes R$', example: 'R$ 120.000,00' },
+  { key: 'qtdPagoMes', label: 'Qtd pago mes', example: '60' },
+  { key: 'abertoMes', label: 'Aberto mes R$', example: 'R$ 80.000,00' },
+  { key: 'qtdAbertoMes', label: 'Qtd aberto mes', example: '40' },
+  { key: 'pctPagoMes', label: '% pago mes', example: '60.0%' },
+  { key: 'pctAbertoMes', label: '% aberto mes', example: '40.0%' },
+  { key: 'totalMes', label: 'Total mes R$', example: 'R$ 200.000,00' },
+  { key: 'qtdTotalMes', label: 'Qtd total mes', example: '100' },
+];
+
+const DEFAULT_TEMPLATE = `📊 *Relatório Diário — {{empresa}}*
+📅 {{data}}
+
+🚗 *Resumo do Dia*
+  • Ativos: {{ativos}}
+  • Vendas hoje: {{vendasHoje}}
+  • Cancelados hoje: {{canceladosHoje}}
+
+📋 *Financeiro do Dia*
+  • Recebido: {{recebidoHoje}} ({{qtdRecebidoHoje}} boletos) — {{pctRecebidoHoje}}
+  • Em aberto: {{abertoHoje}} ({{qtdAbertoHoje}} boletos) — {{pctAbertoHoje}}
+
+💰 *Resumo do mês — {{mesAno}}*
+  • Total recebido: {{pagoMes}} ({{qtdPagoMes}} boletos) — {{pctPagoMes}}
+  • Total em aberto: {{abertoMes}} ({{qtdAbertoMes}} boletos) — {{pctAbertoMes}}
+  • Total geral: {{totalMes}} ({{qtdTotalMes}} boletos)`;
+
+// ── Load data ──
+async function load() {
+  try {
+    const [cr, lr] = await Promise.all([api('/credentials/status'), api('/reports/last-status')]);
+    cred = await cr.json();
+    last = await lr.json();
+  } catch(e) { console.error(e); }
+  render();
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (!cred || !cred.whatsappNumber) {
+    app.innerHTML = '<div class="card"><div class="empty"><h3>Nenhuma empresa configurada</h3><p>Clique em "+ Nova Empresa" para adicionar suas credenciais</p></div></div>';
+    return;
+  }
+
+  const st = last?.status || 'N/A';
+  const dt = last?.executedAt ? new Date(last.executedAt).toLocaleString('pt-BR') : 'Nunca';
+  const bc = st === 'SUCCESS' ? 'b-ok' : st === 'PARTIAL_FAILURE' ? 'b-warn' : st === 'FAILURE' ? 'b-err' : 'b-none';
+  const bt = st === 'SUCCESS' ? 'Operacional' : st === 'PARTIAL_FAILURE' ? 'Parcial' : st === 'FAILURE' ? 'Erro' : 'Pendente';
+
+  let detail = '';
+  if (last?.executedAt) {
+    detail += r('Status', `<span class="s-${st}">${st}</span>`);
+    detail += r('Data', dt);
+    if (last.errorDetail) detail += rc('Erro', `<span class="err-text">${last.errorDetail}</span>`);
+    if (last.message) detail += rc('Mensagem Enviada', `<pre class="msg-text">${esc(last.message)}</pre>`);
+  } else {
+    detail = '<p style="color:#475569;text-align:center;padding:2rem 1rem;">Clique em <strong>Testar Envio</strong> para gerar o primeiro relatorio</p>';
+  }
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="c-head">
+        <h2>${company} <span class="badge ${bc}">${bt}</span></h2>
+        <div class="c-btns">
+          <button class="bg-green" id="btn-send" onclick="trigger()">Testar Envio</button>
+          <button class="bg-amber" onclick="openTpl()">Editar Mensagem</button>
+          <button class="bg-gray" onclick="openModal(true)">Editar</button>
+          <button class="bg-red" onclick="del()">Excluir</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat-item"><div class="stat-label">Status</div><div class="stat-val s-${st}">${bt}</div></div>
+        <div class="stat-item"><div class="stat-label">Ultimo Envio</div><div class="stat-val">${dt}</div></div>
+        <div class="stat-item"><div class="stat-label">WhatsApp</div><div class="stat-val">${fmtPhone(cred.whatsappNumber)}</div></div>
+        <div class="stat-item"><div class="stat-label">Quepasa</div><div class="stat-val" style="font-size:0.72rem">${cred.quepasaBaseUrl||'N/A'}</div></div>
+      </div>
+      <div class="card-msg" id="cmsg"></div>
+      <div class="section-label">Ultimo Relatorio</div>
+      <div class="detail">${detail}</div>
+      <div class="c-foot">
+        <button class="bg-dark" onclick="hist()">Ver Historico Completo</button>
+      </div>
+    </div>
+  `;
+}
+
+function r(label, val) { return `<div class="row"><span class="row-label">${label}</span>${val}</div>`; }
+function rc(label, content) { return `<div class="row row-col"><span class="row-label">${label}</span>${content}</div>`; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function fmtPhone(n) {
+  if (!n) return 'N/A';
+  if (n.length === 13) return '+' + n.slice(0,2) + ' ' + n.slice(2,4) + ' ' + n.slice(4,9) + '-' + n.slice(9);
+  return n;
+}
+
+// ── Trigger report ──
+async function trigger() {
+  const btn = document.getElementById('btn-send');
+  const msg = document.getElementById('cmsg');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  msg.textContent = 'Buscando dados da Provider e enviando via WhatsApp... pode levar alguns minutos';
+  msg.style.color = '#fbbf24';
+  try {
+    const res = await api('/reports/trigger', { method: 'POST' });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Erro'); }
+    msg.textContent = 'Processando... atualiza automaticamente ao concluir';
+    const oldDate = last?.executedAt || '';
+    const t0 = Date.now();
+    const poll = setInterval(async () => {
+      try {
+        const pr = await api('/reports/last-status');
+        const pl = await pr.json();
+        if (pl.executedAt && pl.executedAt !== oldDate) {
+          clearInterval(poll); last = pl; render();
+        } else if (Date.now() - t0 > 600000) {
+          clearInterval(poll);
+          msg.textContent = 'Tempo esgotado — recarregue a pagina';
+          msg.style.color = '#f87171';
+        }
+      } catch(e) {}
+    }, 8000);
+  } catch(e) {
+    msg.textContent = e.message; msg.style.color = '#f87171';
+    btn.disabled = false; btn.textContent = 'Testar Envio';
+  }
+}
+
+// ── Delete ──
+async function del() {
+  if (!confirm('Excluir credenciais de "' + company + '"?\nIsso remove todas as configuracoes.')) return;
+  await api('/credentials', { method: 'DELETE' });
+  location.reload();
+}
+
+// ── History ──
+async function hist() {
+  document.getElementById('hist-overlay').classList.add('open');
+  const list = document.getElementById('hist-list');
+  list.innerHTML = '<p style="color:#64748b;text-align:center;padding:1rem;">Carregando...</p>';
+  try {
+    const res = await api('/reports/history');
+    const logs = await res.json();
+    if (!logs.length) { list.innerHTML = '<p style="color:#475569;text-align:center;padding:1rem;">Nenhum registro encontrado</p>'; return; }
+    list.innerHTML = logs.map(l => {
+      const d = new Date(l.executedAt).toLocaleString('pt-BR');
+      const c = l.status === 'SUCCESS' ? 's-SUCCESS' : l.status === 'FAILURE' ? 's-FAILURE' : 's-PARTIAL_FAILURE';
+      return `<div class="log-item"><span class="${c}" style="font-weight:700">${l.status}</span> <span style="color:#64748b;font-size:0.75rem">${d}</span>${l.errorDetail ? '<div class="err">'+esc(l.errorDetail)+'</div>' : ''}</div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<p style="color:#f87171">'+esc(e.message)+'</p>'; }
+}
+function closeHist() { document.getElementById('hist-overlay').classList.remove('open'); }
+
+// ── Credentials Modal ──
+function openModal(edit) {
+  document.getElementById('modal-msg').textContent = '';
+  document.getElementById('modal-title').textContent = edit ? 'Editar Credenciais' : 'Nova Empresa';
+  const hint = document.getElementById('edit-hint');
+  if (!edit) {
+    document.getElementById('cred-form').reset();
+    document.getElementById('f-qu').value = 'http://localhost:31000';
+    hint.textContent = '';
+    document.getElementById('f-ht-hint').textContent = '';
+    document.getElementById('f-hp-hint').textContent = '';
+    document.getElementById('f-qt-hint').textContent = '';
+  }
+  if (edit && cred) {
+    document.getElementById('f-hu').value = cred.providerUser || '';
+    document.getElementById('f-wn').value = cred.whatsappNumber || '';
+    document.getElementById('f-qu').value = cred.quepasaBaseUrl || 'http://localhost:31000';
+    document.getElementById('f-ht').value = '';
+    document.getElementById('f-hp').value = '';
+    document.getElementById('f-qt').value = '';
+    document.getElementById('f-ht-hint').textContent = cred.hasProviderToken ? '(salvo — vazio mantém atual)' : '';
+    document.getElementById('f-hp-hint').textContent = cred.hasProviderPass ? '(salva — vazio mantém atual)' : '';
+    document.getElementById('f-qt-hint').textContent = cred.hasQuepasaToken ? '(salvo — vazio mantém atual)' : '';
+    hint.textContent = 'Tokens em branco mantêm o valor salvo. Preencha apenas o que deseja alterar.';
+  }
+  document.getElementById('cred-overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('cred-overlay').classList.remove('open'); }
+
+async function saveCreds(e) {
+  e.preventDefault();
+  const msg = document.getElementById('modal-msg');
+  msg.textContent = 'Salvando...'; msg.style.color = '#fbbf24';
+  try {
+    const res = await api('/credentials', {
+      method: 'PUT',
+      body: JSON.stringify({
+        providerToken: document.getElementById('f-ht').value,
+        providerUser: document.getElementById('f-hu').value,
+        providerPass: document.getElementById('f-hp').value,
+        quepasaToken: document.getElementById('f-qt').value,
+        quepasaBaseUrl: document.getElementById('f-qu').value,
+        whatsappNumber: document.getElementById('f-wn').value,
+      }),
+    });
+    const d = await res.json();
+    if (res.ok) { msg.textContent = 'Credenciais salvas!'; msg.style.color = '#34d399'; setTimeout(() => { closeModal(); load(); }, 800); }
+    else { msg.textContent = d.error || 'Erro ao salvar'; msg.style.color = '#f87171'; }
+  } catch(e) { msg.textContent = e.message; msg.style.color = '#f87171'; }
+}
+
+// ── Template Editor ──
+function openTpl() {
+  const editor = document.getElementById('tpl-editor');
+  const varsEl = document.getElementById('tpl-vars');
+  document.getElementById('tpl-msg').textContent = '';
+
+  // Preenche variáveis clicáveis
+  varsEl.innerHTML = TEMPLATE_VARS.map(v =>
+    `<span class="tpl-var" onclick="insertVar('${v.key}')" title="${v.label}: ${v.example}">{{${v.key}}}</span>`
+  ).join('');
+
+  // Carrega template salvo ou padrão
+  editor.value = cred?.messageTemplate || DEFAULT_TEMPLATE;
+  updatePreview();
+
+  editor.addEventListener('input', updatePreview);
+  document.getElementById('tpl-overlay').classList.add('open');
+}
+
+function closeTpl() {
+  document.getElementById('tpl-overlay').classList.remove('open');
+}
+
+function insertVar(key) {
+  const editor = document.getElementById('tpl-editor');
+  const start = editor.selectionStart;
+  const end = editor.selectionEnd;
+  const text = `{{${key}}}`;
+  editor.value = editor.value.substring(0, start) + text + editor.value.substring(end);
+  editor.selectionStart = editor.selectionEnd = start + text.length;
+  editor.focus();
+  updatePreview();
+}
+
+function updatePreview() {
+  const tpl = document.getElementById('tpl-editor').value;
+  const exampleVars = {};
+  TEMPLATE_VARS.forEach(v => exampleVars[v.key] = v.example);
+  const preview = tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => exampleVars[k] || `{{${k}}}`);
+  document.getElementById('tpl-preview').textContent = preview;
+}
+
+function resetTemplate() {
+  document.getElementById('tpl-editor').value = DEFAULT_TEMPLATE;
+  updatePreview();
+}
+
+async function saveTemplate() {
+  const msg = document.getElementById('tpl-msg');
+  const template = document.getElementById('tpl-editor').value;
+  msg.textContent = 'Salvando...'; msg.style.color = '#fbbf24';
+  try {
+    const res = await api('/credentials', {
+      method: 'PUT',
+      body: JSON.stringify({ messageTemplate: template }),
+    });
+    const d = await res.json();
+    if (res.ok) {
+      msg.textContent = 'Template salvo!'; msg.style.color = '#34d399';
+      if (cred) cred.messageTemplate = template;
+      setTimeout(() => closeTpl(), 800);
+    } else {
+      msg.textContent = d.error || 'Erro ao salvar'; msg.style.color = '#f87171';
+    }
+  } catch(e) { msg.textContent = e.message; msg.style.color = '#f87171'; }
+}
+
+function logout() { localStorage.clear(); location.href = '/'; }
+
+load();
+</script>
 </body>
 </html>
