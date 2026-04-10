@@ -5,6 +5,7 @@ export interface CredentialsInput {
   providerToken: string;
   providerUser: string;
   providerPass: string;
+  providerCodigoRegional?: string | null;
   quepasaToken: string;
   quepasaBaseUrl?: string;
   whatsappNumber: string;
@@ -15,6 +16,7 @@ export interface CredentialsDecrypted {
   providerToken: string;
   providerUser: string;
   providerPass: string;
+  providerCodigoRegional: string | null;
   quepasaToken: string;
   quepasaBaseUrl: string;
   whatsappNumber: string;
@@ -53,6 +55,10 @@ export class CredentialsService {
     if (data.quepasaBaseUrl) update.quepasaBaseUrl = data.quepasaBaseUrl;
     if (data.whatsappNumber) update.whatsappNumber = data.whatsappNumber;
     if (data.messageTemplate !== undefined) update.messageTemplate = data.messageTemplate;
+    if (data.providerCodigoRegional !== undefined) {
+      // string vazia ou null => limpa o filtro
+      (update as any).providerCodigoRegional = data.providerCodigoRegional || null;
+    }
 
     if (!existing) {
       // Primeiro cadastro — precisa ter tudo
@@ -86,6 +92,7 @@ export class CredentialsService {
       providerToken: decrypt(creds.providerTokenEncrypted),
       providerUser: decrypt(creds.providerUserEncrypted),
       providerPass: decrypt(creds.providerPassEncrypted),
+      providerCodigoRegional: creds.providerCodigoRegional,
       quepasaToken: decrypt(creds.quepasaTokenEncrypted),
       quepasaBaseUrl: creds.quepasaBaseUrl,
       whatsappNumber: creds.whatsappNumber,
@@ -106,6 +113,7 @@ export class CredentialsService {
       whatsappNumber: creds.whatsappNumber,
       quepasaBaseUrl: creds.quepasaBaseUrl,
       providerUser,
+      providerCodigoRegional: creds.providerCodigoRegional,
       hasProviderToken: !!creds.providerTokenEncrypted,
       hasProviderPass: !!creds.providerPassEncrypted,
       hasQuepasaToken: !!creds.quepasaTokenEncrypted,

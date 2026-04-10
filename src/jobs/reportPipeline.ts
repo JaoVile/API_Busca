@@ -25,7 +25,12 @@ export async function runReportForTenant(tenantId: string): Promise<void> {
     });
 
     // 2. FETCH - buscar dados da Provider
-    const report = await fetchProviderReport(creds.providerToken, creds.providerUser, creds.providerPass);
+    const report = await fetchProviderReport(
+      creds.providerToken,
+      creds.providerUser,
+      creds.providerPass,
+      creds.providerCodigoRegional,
+    );
 
     // 3. PARSE - formatar mensagem (usa template customizado se houver)
     const message = formatReportMessage(tenant!.companyName, report, creds.messageTemplate);

@@ -55,8 +55,8 @@ npx prisma generate --config prisma/prisma.config.ts      # Regenerate client
 ## API Endpoints
 
 - `POST /api/auth/register` and `POST /api/auth/login` — Public
-- `PUT /api/credentials` — Protected (accepts credentials fields + `messageTemplate`)
-- `GET /api/credentials/status` — Protected (returns status + current `messageTemplate`)
+- `PUT /api/credentials` — Protected (accepts credentials fields + `messageTemplate` + optional `providerCodigoRegional`)
+- `GET /api/credentials/status` — Protected (returns status + current `messageTemplate` + `providerCodigoRegional`)
 - `DELETE /api/credentials` — Protected
 - `GET /api/reports/last-status`, `GET /api/reports/history`, `POST /api/reports/trigger` — Protected
 - `GET /api/health` — Health check
@@ -74,9 +74,29 @@ Tests in `tests/` — unit tests (`encryption`, `dateUtils`, `messageFormatter`)
 - Base URL: `https://api.exemplo.com/v2`
 - Auth: POST `/usuario/autenticar` with Bearer SGA token + usuario/senha body → returns `token_usuario`
 - Vehicles: POST `listar/veiculo` with `codigo_situacao` and optional `data_cadastro`/`data_cadastro_final` (format: `yyyy-mm-dd`)
-- Cancellations: POST `listar/alteracao-veiculos` with `data_inicial`/`data_final` (format: `dd/mm/yyyy`)
-- Boletos: POST `listar/boleto` with `codigo_situacao` (1=BAIXADO, 2=ABERTO) and `mes_referente` (format: `MM/YYYY`). Paginates at 5000 items.
-- Daily financial data is extracted from monthly query by comparing `data_pagamento` (paid) or `data_vencimento` (open) with today's date
+- Cancellations: POST `listar/alteracao-veiculos` with `data_inicial`/`data_final` (format: `dd/mm/yyyy`). Response items have `codigo_veiculo` but NO `codigo_regional` — to filter by region, cross-reference against `listar/veiculo` with cancel `codigo_situacao`.
+- Boletos: POST `listar/boleto` with `codigo_situacao` (1=BAIXADO, 2=ABERTO) and `mes_referente` (format: `MM/YYYY`).
+- Daily financial data is extracted from monthly query by comparing `data_pagamento` (paid) or `data_vencimento` (open) with today's date.
+
+### Pagination quirks (important)
+
+The two paginated endpoints use **different semantics** for `inicio_paginacao`:
+
+- `listar/veiculo`: `inicio_paginacao` is a **1-indexed row offset**. Valid values: 1, 501, 1001, ... With `quantidade_por_pagina=500`, passing 2 returns records 2..501 (not page 2). Response includes `total_veiculos`, `numero_paginas`, `pagina_corrente`. `inicio_paginacao=0` returns 406.
+- `listar/boleto`: `inicio_paginacao` is a **0-indexed page number**. Valid values: 0, 1, 2, ... Page 0 returns rows 1..qp, page 1 returns rows qp+1..2qp, etc. Response has no pagination metadata — stop when `length < quantidade_por_pagina`.
+
+Max `quantidade_por_pagina` is 5000 (returns 406 with `"O LIMITE máximo é de 5000"` if exceeded). We use 500 in production to keep individual requests small and avoid timeouts/token expiry mid-request.
+
+The `token_usuario` expires quickly between long requests — `createProviderClient` accepts SGA token/user/pass and installs an axios interceptor that re-authenticates on 401.
+
+### Regional filter
+
+Each tenant has an optional `providerCodigoRegional` credential. When set:
+- Vehicles/sales/cancellations/boletos are paginated fully and filtered client-side by `codigo_regional`. The API-side `codigo_regional` body param is silently ignored.
+- BAIXADOS and ABERTOS also filter by `codigo_situacao_associado === '1'` (active associates only), excluding cancelled/pre-cancelled.
+- Cancellations cross-reference against `listar/veiculo` with cancel `codigo_situacao` to determine which cancelled vehicles belong to the regional.
+
+When unset, counts are global (uses `total_veiculos` directly, no pagination needed for vehicle counts).
 
 ## Message Template Variables
 
