@@ -55,8 +55,8 @@ npx prisma generate --config prisma/prisma.config.ts      # Regenerate client
 ## API Endpoints
 
 - `POST /api/auth/register` and `POST /api/auth/login` — Public
-- `PUT /api/credentials` — Protected (accepts credentials fields + `messageTemplate` + optional `providerCodigoRegional`)
-- `GET /api/credentials/status` — Protected (returns status + current `messageTemplate` + `providerCodigoRegional`)
+- `PUT /api/credentials` — Protected (accepts credentials fields + `messageTemplate` + optional `providerCodigoRegional` / `providerCodigoCooperativa`)
+- `GET /api/credentials/status` — Protected (returns status + current `messageTemplate` + `providerCodigoRegional` + `providerCodigoCooperativa`)
 - `DELETE /api/credentials` — Protected
 - `GET /api/reports/last-status`, `GET /api/reports/history`, `POST /api/reports/trigger` — Protected
 - `GET /api/health` — Health check
@@ -89,14 +89,21 @@ Max `quantidade_por_pagina` is 5000 (returns 406 with `"O LIMITE máximo é de 5
 
 The `token_usuario` expires quickly between long requests — `createProviderClient` accepts SGA token/user/pass and installs an axios interceptor that re-authenticates on 401.
 
-### Regional filter
+### Regional / cooperativa filters (shared VehicleContext)
 
-Each tenant has an optional `providerCodigoRegional` credential. When set:
-- Vehicles/sales/cancellations/boletos are paginated fully and filtered client-side by `codigo_regional`. The API-side `codigo_regional` body param is silently ignored.
-- BAIXADOS and ABERTOS also filter by `codigo_situacao_associado === '1'` (active associates only), excluding cancelled/pre-cancelled.
-- Cancellations cross-reference against `listar/veiculo` with cancel `codigo_situacao` to determine which cancelled vehicles belong to the regional.
+Each tenant has optional `providerCodigoRegional` and `providerCodigoCooperativa` credentials. When either is set, `providerOrchestrator` calls `buildVehicleContext` once at the start of each run (`src/services/provider/vehicleContext.ts`) which paginates all active vehicles and collects:
+- `allowedAssociados: Set<string>` — codigo_associado of vehicles matching the filter
+- `allowedVeiculos: Set<string>` — codigo_veiculo of vehicles matching the filter
+- `totalAtivos: number` — count of active vehicles matching the filter (= RF03)
+- `todaySalesCount: number` — count of matching vehicles cadastrados hoje (= RF04)
 
-When unset, counts are global (uses `total_veiculos` directly, no pagination needed for vehicle counts).
+This context is passed to all four fetchers so they can filter without re-paginating. `getActiveVehicles` and `getTodaySales` become O(1) when the context is present.
+
+`getMonthlyFinancials` uses `allowedAssociados` to filter boletos (boletos only have `codigo_associado`, not `codigo_cooperativa`). It also always excludes boletos where `codigo_situacao_associado` is in the cancel list (dynamically fetched via `cancelCodes.ts`). Inadimplentes/negativados are INCLUDED — only CANCELADO and PRE-CANCELAMENTO are excluded.
+
+When no filter is set, counts come from `total_veiculos` directly (no pagination — fast path).
+
+The API-side `codigo_regional` / `codigo_cooperativa` body params are silently ignored by Provider — that's why we filter client-side.
 
 ## Message Template Variables
 

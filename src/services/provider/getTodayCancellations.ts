@@ -1,89 +1,23 @@
 import { AxiosInstance } from 'axios';
-
-const PAGE_SIZE = 500;
-const MAX_PAGES = 200;
-
-// Cache dos códigos de situação de cancelamento (não muda durante a execução)
-let cancelSituationCodes: string[] | null = null;
-
-async function fetchCancelSituationCodes(client: AxiosInstance): Promise<string[]> {
-  if (cancelSituationCodes) return cancelSituationCodes;
-
-  const response = await client.get('/listar/situacao/todos');
-  const situacoes = Array.isArray(response.data) ? response.data : [];
-
-  cancelSituationCodes = situacoes
-    .filter((s: any) => {
-      const desc = (s.descricao_situacao || '').toUpperCase();
-      return desc === 'CANCELADO' || desc === 'PRE-CANCELAMENTO';
-    })
-    .map((s: any) => String(s.codigo_situacao));
-
-  console.log(
-    `[Provider] Situações de cancelamento encontradas: ${JSON.stringify(
-      situacoes
-        .filter((s: any) => cancelSituationCodes!.includes(String(s.codigo_situacao)))
-        .map((s: any) => ({ cod: s.codigo_situacao, desc: s.descricao_situacao }))
-    )}`
-  );
-
-  return cancelSituationCodes;
-}
-
-/**
- * Busca todos os codigo_veiculo da regional com a situação informada.
- * Paginação offset 1-indexed, qp=500.
- */
-async function fetchVehicleIdsByRegional(
-  client: AxiosInstance,
-  codigoSituacao: string,
-  codigoRegional: string
-): Promise<Set<string>> {
-  const ids = new Set<string>();
-  let offset = 1;
-  let pagesFetched = 0;
-
-  while (pagesFetched < MAX_PAGES) {
-    try {
-      const response = await client.post('listar/veiculo', {
-        codigo_situacao: Number(codigoSituacao),
-        inicio_paginacao: offset,
-        quantidade_por_pagina: PAGE_SIZE,
-      }, { timeout: 60000 });
-
-      const data = response.data;
-      const veiculos = Array.isArray(data) ? data : (data?.veiculos ?? []);
-
-      for (const v of veiculos) {
-        if (String(v.codigo_regional) === codigoRegional) {
-          ids.add(String(v.codigo_veiculo));
-        }
-      }
-
-      pagesFetched++;
-      if (veiculos.length < PAGE_SIZE) break;
-      offset += PAGE_SIZE;
-    } catch (e: any) {
-      if (e.response?.status === 406) break; // sem mais dados
-      throw e;
-    }
-  }
-
-  return ids;
-}
+import { VehicleContext } from './vehicleContext';
+import { fetchCancelSituationCodes } from './cancelCodes';
 
 /**
  * RF05 — Cancelamentos do dia
  *
- * 1. Busca os códigos de situação que representam cancelamento (CANCELADO / PRE-CANCELAMENTO)
- * 2. Consulta POST /listar/alteracao-veiculos para as alterações do dia
- * 3. Filtra apenas as mudanças cujo valor_posterior é um código de cancelamento
- * 4. Se codigoRegional informado: cruza com os veículos da regional
- *    (cancelamentos não têm codigo_regional no payload de alteração)
+ * 1. Busca códigos de situação que representam cancelamento (CANCELADO / PRE-CANCELAMENTO)
+ * 2. Consulta POST /listar/alteracao-veiculos para alterações do dia
+ * 3. Filtra apenas mudanças cujo valor_posterior é um código de cancelamento
+ * 4. Se houver VehicleContext: intersecta com ctx.allowedVeiculos.
+ *    Importante: allowedVeiculos contém apenas veículos com codigo_situacao=1 (ativos).
+ *    Um veículo que foi cancelado hoje NÃO está mais em allowedVeiculos. Então o
+ *    filtro aqui serve só quando o cancelamento ocorreu mas o veículo ainda aparece
+ *    como ativo no snapshot — casos raros. Para robustez, usamos cruzamento por
+ *    codigo_veiculo das alterações de cancelamento.
  */
 export async function getTodayCancellations(
   client: AxiosInstance,
-  codigoRegional?: string | null
+  ctx: VehicleContext | null
 ): Promise<number> {
   try {
     const cancelCodes = await fetchCancelSituationCodes(client);
@@ -114,26 +48,49 @@ export async function getTodayCancellations(
       return cancelCodes.includes(String(item.valor_posterior));
     });
 
-    if (!codigoRegional) {
+    if (!ctx) {
       console.log(
         `[Provider] Cancelamentos do dia: ${cancelados.length} de ${items.length} alterações totais`
       );
       return cancelados.length;
     }
 
-    // Filtro por regional: cruzar codigo_veiculo com os veículos cancelados da regional
-    const target = String(codigoRegional);
-    const regionalVehicles = new Set<string>();
+    // Com contexto: precisamos cruzar com veículos que PERTENCIAM ao filtro
+    // antes de serem cancelados. Como allowedVeiculos só tem ativos atuais,
+    // buscamos os veículos cancelados da cooperativa/regional e cruzamos.
+    // Para simplificar, buscamos os veículos com codigo_situacao de cancelamento
+    // e filtramos pelos mesmos critérios do contexto.
+    const filter = ctx.filter;
+    const cancelVehicleIds = new Set<string>();
 
     for (const cod of cancelCodes) {
-      const ids = await fetchVehicleIdsByRegional(client, cod, target);
-      for (const id of ids) regionalVehicles.add(id);
+      let offset = 1;
+      while (offset < 100000) {
+        try {
+          const r = await client.post('listar/veiculo', {
+            codigo_situacao: Number(cod),
+            inicio_paginacao: offset,
+            quantidade_por_pagina: 500,
+          }, { timeout: 180000 });
+          const vs = Array.isArray(r.data) ? r.data : (r.data?.veiculos ?? []);
+          for (const v of vs) {
+            if (filter.codigoRegional && String(v.codigo_regional) !== String(filter.codigoRegional)) continue;
+            if (filter.codigoCooperativa && String(v.codigo_cooperativa) !== String(filter.codigoCooperativa)) continue;
+            cancelVehicleIds.add(String(v.codigo_veiculo));
+          }
+          if (vs.length < 500) break;
+          offset += 500;
+        } catch (e: any) {
+          if (e.response?.status === 406) break;
+          throw e;
+        }
+      }
     }
 
-    const filtered = cancelados.filter((c: any) => regionalVehicles.has(String(c.codigo_veiculo)));
+    const filtered = cancelados.filter((c: any) => cancelVehicleIds.has(String(c.codigo_veiculo)));
 
     console.log(
-      `[Provider] Cancelamentos do dia (regional ${target}): ${filtered.length} de ${cancelados.length} totais`
+      `[Provider] Cancelamentos do dia (filtrado): ${filtered.length} de ${cancelados.length} totais`
     );
 
     return filtered.length;

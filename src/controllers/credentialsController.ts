@@ -7,7 +7,7 @@ const service = new CredentialsService();
 export class CredentialsController {
   async upsert(req: AuthRequest, res: Response) {
     try {
-      const { providerToken, providerUser, providerPass, providerCodigoRegional, quepasaToken, quepasaBaseUrl, whatsappNumber, messageTemplate } =
+      const { providerToken, providerUser, providerPass, providerCodigoRegional, providerCodigoCooperativa, quepasaToken, quepasaBaseUrl, whatsappNumber, messageTemplate } =
         req.body;
 
       // Verificar se já existe credencial salva
@@ -28,6 +28,7 @@ export class CredentialsController {
         providerUser: providerUser || undefined,
         providerPass: providerPass || undefined,
         providerCodigoRegional: providerCodigoRegional !== undefined ? providerCodigoRegional : undefined,
+        providerCodigoCooperativa: providerCodigoCooperativa !== undefined ? providerCodigoCooperativa : undefined,
         quepasaToken: quepasaToken || undefined,
         quepasaBaseUrl: quepasaBaseUrl || undefined,
         whatsappNumber: whatsappNumber || undefined,

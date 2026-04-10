@@ -30,6 +30,7 @@ export async function runReportForTenant(tenantId: string): Promise<void> {
       creds.providerUser,
       creds.providerPass,
       creds.providerCodigoRegional,
+      creds.providerCodigoCooperativa,
     );
 
     // 3. PARSE - formatar mensagem (usa template customizado se houver)

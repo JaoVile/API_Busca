@@ -1,19 +1,20 @@
 import { AxiosInstance } from 'axios';
 import { FinancialSummary } from './providerTypes';
+import { VehicleContext } from './vehicleContext';
+import { fetchCancelSituationCodes } from './cancelCodes';
 
 /**
  * RF06 — Resumo financeiro do mês atual + dia atual
  *
  * BAIXADOS (pagos): busca mês atual + meses anteriores para capturar
  *   pagamentos de boletos atrasados feitos hoje.
- * ABERTOS: boletos com vencimento/referência do mês atual.
+ * ABERTOS: boletos com mes_referente do mês atual.
  *
- * Em AMBOS, filtra sempre `codigo_situacao_associado === '1'` (associado ativo).
- * Boletos de cancelados / pré-cancelamento são sempre excluídos dos totais,
- * independentemente de haver filtro por codigo_regional.
- *
- * codigo_situacao 1 = BAIXADO (pago)
- * codigo_situacao 2 = ABERTO
+ * Filtros sempre aplicados:
+ *  - `codigo_situacao_associado` NÃO está em cancelCodes (exclui apenas
+ *    CANCELADO / PRE-CANCELAMENTO; inadimplentes e negativados permanecem).
+ *  - Se houver VehicleContext: só conta boletos cujo `codigo_associado`
+ *    pertence a `ctx.allowedAssociados`.
  *
  * Paginação de listar/boleto: `inicio_paginacao` é NÚMERO DE PÁGINA 0-indexed
  * (diferente de listar/veiculo que usa offset). Com qp=500: 0, 1, 2, 3, ...
@@ -60,7 +61,7 @@ async function fetchBoletosWithRetry(
           ...body,
           inicio_paginacao: page,
           quantidade_por_pagina: PAGE_SIZE,
-        }, { timeout: 120000 });
+        }, { timeout: 180000 });
         break;
       } catch (e: any) {
         if (e.response?.status === 406) {
@@ -90,14 +91,9 @@ async function fetchBoletosWithRetry(
   return allBoletos;
 }
 
-function matchesRegional(boleto: any, codigoRegional?: string | null): boolean {
-  if (!codigoRegional) return true;
-  return String(boleto.codigo_regional) === String(codigoRegional);
-}
-
 export async function getMonthlyFinancials(
   client: AxiosInstance,
-  codigoRegional?: string | null
+  ctx: VehicleContext | null
 ): Promise<FinancialSummary> {
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -106,7 +102,28 @@ export async function getMonthlyFinancials(
   const mesRef = `${mm}/${yyyy}`;
   const hojeISO = `${yyyy}-${mm}-${dd}`;
   const errors: string[] = [];
-  const regLabel = codigoRegional ? ` regional=${codigoRegional}` : '';
+
+  const filterLabel = ctx
+    ? ` [${[
+        ctx.filter.codigoRegional ? `reg=${ctx.filter.codigoRegional}` : null,
+        ctx.filter.codigoCooperativa ? `coop=${ctx.filter.codigoCooperativa}` : null,
+      ].filter(Boolean).join(' ')}]`
+    : '';
+
+  const cancelCodes = await fetchCancelSituationCodes(client);
+
+  // Predicate unificado — devolve true se o boleto deve ser CONTADO
+  const shouldCount = (b: any, stats: { filtradosCancel: number; filtradosCtx: number }): boolean => {
+    if (cancelCodes.includes(String(b.codigo_situacao_associado))) {
+      stats.filtradosCancel++;
+      return false;
+    }
+    if (ctx && !ctx.allowedAssociados.has(String(b.codigo_associado))) {
+      stats.filtradosCtx++;
+      return false;
+    }
+    return true;
+  };
 
   const result: FinancialSummary = {
     recebidoHoje: 0, qtdRecebidoHoje: 0,
@@ -123,23 +140,18 @@ export async function getMonthlyFinancials(
 
     for (const mes of months) {
       const isCurrentMonth = mes === mesRef;
-      const label = `BAIXADOS (${mes})${regLabel}`;
+      const label = `BAIXADOS (${mes})${filterLabel}`;
 
       const boletos = await fetchBoletosWithRetry(client, {
         codigo_situacao: 1,
         mes_referente: mes,
       }, label);
 
+      const stats = { filtradosCancel: 0, filtradosCtx: 0 };
       let mesCount = 0, mesTotal = 0, hojeCount = 0, hojeTotal = 0;
-      let filtradosSitAssoc = 0;
 
       for (const b of boletos) {
-        if (!matchesRegional(b, codigoRegional)) continue;
-        // Exclui cancelados / pré-cancelamento sempre
-        if (String(b.codigo_situacao_associado) !== '1') {
-          filtradosSitAssoc++;
-          continue;
-        }
+        if (!shouldCount(b, stats)) continue;
 
         const valor = parseFloat(String(b.valor_pagamento || b.valor_boleto || '0').replace(',', '.')) || 0;
         const dataPag = parseDateToISO(b.data_pagamento || '');
@@ -164,9 +176,9 @@ export async function getMonthlyFinancials(
       result.qtdRecebidoHoje += hojeCount;
 
       console.log(
-        `[Provider] ${label}: ${boletos.length} boletos (${filtradosSitAssoc} cancelados filtrados), ` +
+        `[Provider] ${label}: ${boletos.length} total (${stats.filtradosCancel} cancelados, ${stats.filtradosCtx} fora do filtro), ` +
         `${hojeCount} pagos hoje (R$ ${hojeTotal.toFixed(2)})` +
-        (isCurrentMonth ? `, total mês: ${mesCount} boletos R$ ${mesTotal.toFixed(2)}` : '')
+        (isCurrentMonth ? `, mês: ${mesCount} (R$ ${mesTotal.toFixed(2)})` : '')
       );
 
       if (!isCurrentMonth && hojeCount === 0) break;
@@ -178,25 +190,17 @@ export async function getMonthlyFinancials(
 
   // ── ABERTOS ────────────────────────────────────────────────────────
   try {
-    const label = `ABERTOS (${mesRef})${regLabel}`;
+    const label = `ABERTOS (${mesRef})${filterLabel}`;
     const boletos = await fetchBoletosWithRetry(client, {
       codigo_situacao: 2,
       mes_referente: mesRef,
     }, label);
 
+    const stats = { filtradosCancel: 0, filtradosCtx: 0 };
     let totalCount = 0, totalVal = 0, hojeCount = 0, hojeVal = 0;
-    let filtradosSitAssoc = 0;
-    let filtradosRegional = 0;
 
     for (const b of boletos) {
-      if (!matchesRegional(b, codigoRegional)) {
-        filtradosRegional++;
-        continue;
-      }
-      if (String(b.codigo_situacao_associado) !== '1') {
-        filtradosSitAssoc++;
-        continue;
-      }
+      if (!shouldCount(b, stats)) continue;
 
       const valor = parseFloat(String(b.valor_boleto || '0').replace(',', '.')) || 0;
       totalCount++;
@@ -215,8 +219,8 @@ export async function getMonthlyFinancials(
     result.qtdAbertoHoje = hojeCount;
 
     console.log(
-      `[Provider] ${label}: ${totalCount} válidos (R$ ${totalVal.toFixed(2)}), ` +
-      `${filtradosSitAssoc} filtrados sit_assoc, ${filtradosRegional} filtrados regional, ${hojeCount} vencendo hoje`
+      `[Provider] ${label}: ${boletos.length} total (${stats.filtradosCancel} cancelados, ${stats.filtradosCtx} fora do filtro), ` +
+      `${totalCount} válidos (R$ ${totalVal.toFixed(2)}), ${hojeCount} vencendo hoje`
     );
   } catch (e: any) {
     console.error(`[Provider] Erro ABERTOS: ${e.message}`);

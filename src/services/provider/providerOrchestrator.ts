@@ -3,16 +3,22 @@ import { getActiveVehicles } from './getActiveVehicles';
 import { getTodaySales } from './getTodaySales';
 import { getTodayCancellations } from './getTodayCancellations';
 import { getMonthlyFinancials } from './getMonthlyFinancials';
+import { buildVehicleContext } from './vehicleContext';
 import { ProviderReport, FinancialSummary } from './providerTypes';
 
 export async function fetchProviderReport(
   providerToken: string,
   usuario: string,
   senha: string,
-  codigoRegional?: string | null
+  codigoRegional?: string | null,
+  codigoCooperativa?: string | null,
 ): Promise<ProviderReport> {
   const tokenUsuario = await authenticateProvider(providerToken, usuario, senha);
   const client = createProviderClient(tokenUsuario, providerToken, usuario, senha);
+
+  // Se há filtro (regional ou cooperativa), pré-fetch todos os veículos uma vez
+  // e compartilha entre os fetchers via VehicleContext.
+  const ctx = await buildVehicleContext(client, { codigoRegional, codigoCooperativa });
 
   const errors: string[] = [];
   const defaultFin: FinancialSummary = {
@@ -32,10 +38,10 @@ export async function fetchProviderReport(
   let financeiro = defaultFin;
 
   const [r1, r2, r3, r4] = await Promise.allSettled([
-    getActiveVehicles(client, codigoRegional),
-    getTodaySales(client, codigoRegional),
-    getTodayCancellations(client, codigoRegional),
-    getMonthlyFinancials(client, codigoRegional),
+    getActiveVehicles(client, ctx),
+    getTodaySales(client, ctx),
+    getTodayCancellations(client, ctx),
+    getMonthlyFinancials(client, ctx),
   ]);
 
   if (r1.status === 'fulfilled') totalAtivos = r1.value;
