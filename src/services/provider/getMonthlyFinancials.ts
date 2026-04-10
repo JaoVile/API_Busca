@@ -6,9 +6,11 @@ import { FinancialSummary } from './providerTypes';
  *
  * BAIXADOS (pagos): busca mês atual + meses anteriores para capturar
  *   pagamentos de boletos atrasados feitos hoje.
- * ABERTOS: apenas boletos de associados ATIVOS (codigo_situacao_associado = "1"),
- *   excluindo cancelados/pré-cancelados.
- * Se codigoRegional informado, filtra também por codigo_regional client-side.
+ * ABERTOS: boletos com vencimento/referência do mês atual.
+ *
+ * Em AMBOS, filtra sempre `codigo_situacao_associado === '1'` (associado ativo).
+ * Boletos de cancelados / pré-cancelamento são sempre excluídos dos totais,
+ * independentemente de haver filtro por codigo_regional.
  *
  * codigo_situacao 1 = BAIXADO (pago)
  * codigo_situacao 2 = ABERTO
@@ -129,11 +131,15 @@ export async function getMonthlyFinancials(
       }, label);
 
       let mesCount = 0, mesTotal = 0, hojeCount = 0, hojeTotal = 0;
+      let filtradosSitAssoc = 0;
 
       for (const b of boletos) {
         if (!matchesRegional(b, codigoRegional)) continue;
-        // Para BAIXADOS, também filtra associados ativos quando regional é aplicado
-        if (codigoRegional && String(b.codigo_situacao_associado) !== '1') continue;
+        // Exclui cancelados / pré-cancelamento sempre
+        if (String(b.codigo_situacao_associado) !== '1') {
+          filtradosSitAssoc++;
+          continue;
+        }
 
         const valor = parseFloat(String(b.valor_pagamento || b.valor_boleto || '0').replace(',', '.')) || 0;
         const dataPag = parseDateToISO(b.data_pagamento || '');
@@ -158,8 +164,9 @@ export async function getMonthlyFinancials(
       result.qtdRecebidoHoje += hojeCount;
 
       console.log(
-        `[Provider] ${label}: ${boletos.length} boletos (${mesCount} válidos), ${hojeCount} pagos hoje (R$ ${hojeTotal.toFixed(2)})` +
-        (isCurrentMonth ? `, total mês: R$ ${mesTotal.toFixed(2)}` : '')
+        `[Provider] ${label}: ${boletos.length} boletos (${filtradosSitAssoc} cancelados filtrados), ` +
+        `${hojeCount} pagos hoje (R$ ${hojeTotal.toFixed(2)})` +
+        (isCurrentMonth ? `, total mês: ${mesCount} boletos R$ ${mesTotal.toFixed(2)}` : '')
       );
 
       if (!isCurrentMonth && hojeCount === 0) break;
