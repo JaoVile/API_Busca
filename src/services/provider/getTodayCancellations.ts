@@ -80,6 +80,10 @@ export async function getTodayCancellations(client: AxiosInstance): Promise<numb
 
     return cancelados.length;
   } catch (error: any) {
+    if (error.response?.status === 406) {
+      console.log('[Provider] Cancelamentos do dia: 0 (406 - sem dados)');
+      return 0;
+    }
     throw new Error(
       `Provider Cancelamentos: ${error.response?.status || ''} ${error.message}`
     );

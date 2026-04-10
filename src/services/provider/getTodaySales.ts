@@ -19,6 +19,11 @@ export async function getTodaySales(client: AxiosInstance): Promise<number> {
 
     return Number(response.data?.total_veiculos) || 0;
   } catch (error: any) {
+    // 406 = sem resultados para o período (normal em dias sem vendas)
+    if (error.response?.status === 406) {
+      console.log('[Provider] Vendas do dia: 0 (406 - sem dados)');
+      return 0;
+    }
     throw new Error(
       `Provider Vendas: ${error.response?.status || ''} ${error.message}`
     );

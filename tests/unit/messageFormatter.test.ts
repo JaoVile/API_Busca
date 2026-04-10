@@ -28,8 +28,8 @@ describe('formatReportMessage', () => {
 
   it('shows daily and monthly sections', () => {
     const msg = formatReportMessage('X', report);
-    expect(msg).toContain('Financeiro do Dia');
-    expect(msg).toContain('Resumo do mês');
+    expect(msg).toContain('Financeiro Hoje');
+    expect(msg).toContain('Financeiro do Mês');
   });
 
   it('shows percentages', () => {

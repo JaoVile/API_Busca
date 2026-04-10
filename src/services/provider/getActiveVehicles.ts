@@ -15,6 +15,10 @@ export async function getActiveVehicles(client: AxiosInstance): Promise<number> 
 
     return Number(response.data?.total_veiculos) || 0;
   } catch (error: any) {
+    if (error.response?.status === 406) {
+      console.log('[Provider] Ativos: 0 (406 - sem dados)');
+      return 0;
+    }
     throw new Error(
       `Provider Ativos: ${error.response?.status || ''} ${error.message}`
     );

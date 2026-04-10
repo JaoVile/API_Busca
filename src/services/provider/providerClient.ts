@@ -34,15 +34,44 @@ export async function authenticateProvider(
 
 /**
  * Etapa 2: Cria um cliente HTTP autenticado com o token_usuario
- * Todas as chamadas subsequentes usam este cliente
+ * Inclui interceptor para re-autenticar automaticamente em caso de 401
  */
-export function createProviderClient(tokenUsuario: string): AxiosInstance {
-  return axios.create({
+export function createProviderClient(
+  tokenUsuario: string,
+  providerToken?: string,
+  usuario?: string,
+  senha?: string
+): AxiosInstance {
+  const client = axios.create({
     baseURL: BASE_URL,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${tokenUsuario}`,
     },
-    timeout: 30000, // 30s padrão para chamadas rápidas
+    timeout: 30000,
   });
+
+  if (providerToken && usuario && senha) {
+    let isRefreshing = false;
+
+    client.interceptors.response.use(undefined, async (error) => {
+      const originalRequest = error.config;
+      if (error.response?.status === 401 && !originalRequest._retried && !isRefreshing) {
+        originalRequest._retried = true;
+        isRefreshing = true;
+        try {
+          console.log('[Provider] Token expirado, re-autenticando...');
+          const newToken = await authenticateProvider(providerToken, usuario, senha);
+          client.defaults.headers['Authorization'] = `Bearer ${newToken}`;
+          originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+          return client(originalRequest);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+      return Promise.reject(error);
+    });
+  }
+
+  return client;
 }

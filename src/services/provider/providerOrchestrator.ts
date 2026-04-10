@@ -11,7 +11,7 @@ export async function fetchProviderReport(
   senha: string
 ): Promise<ProviderReport> {
   const tokenUsuario = await authenticateProvider(providerToken, usuario, senha);
-  const client = createProviderClient(tokenUsuario);
+  const client = createProviderClient(tokenUsuario, providerToken, usuario, senha);
 
   const errors: string[] = [];
   const defaultFin: FinancialSummary = {
