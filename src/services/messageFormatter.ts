@@ -31,8 +31,9 @@ export const DEFAULT_TEMPLATE = `📊 *Relatório Diário — {{empresa}}*
   • Cancelados hoje: {{canceladosHoje}}
 
 📋 *Financeiro Hoje*
-  • Recebido: {{recebidoHoje}} ({{qtdRecebidoHoje}} boletos)
-  • Em aberto: {{abertoHoje}} ({{qtdAbertoHoje}} boletos)
+  • Recebido: {{recebidoHoje}} ({{qtdRecebidoHoje}} boletos) — {{pctRecebidoHoje}}
+  • Em aberto: {{abertoHoje}} ({{qtdAbertoHoje}} boletos) — {{pctAbertoHoje}}
+  • Total: {{totalDia}} ({{qtdTotalDia}} boletos)
 
 💰 *Financeiro do Mês — {{mesAno}}*
   • Recebido: {{pagoMes}} ({{qtdPagoMes}} boletos) — {{pctPagoMes}}
@@ -69,6 +70,7 @@ export function formatReportMessage(
     pctRecebidoHoje: pct(financeiro.recebidoHoje, totalDia),
     pctAbertoHoje: pct(financeiro.abertoHoje, totalDia),
     totalDia: currency(totalDia),
+    qtdTotalDia: num(financeiro.qtdRecebidoHoje + financeiro.qtdAbertoHoje),
     pagoMes: currency(financeiro.pagoMes),
     qtdPagoMes: num(financeiro.qtdPagoMes),
     abertoMes: currency(financeiro.abertoMes),
