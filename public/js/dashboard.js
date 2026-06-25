@@ -171,7 +171,7 @@ function renderLastReport() {
 // ── Format phone ──
 function formatPhone(num) {
   if (!num) return 'N/A';
-  // 5581999430696 → +55 81 99943-0696
+  // 5581999999999 → +55 81 99999-9999
   if (num.length === 13) {
     return `+${num.slice(0,2)} ${num.slice(2,4)} ${num.slice(4,9)}-${num.slice(9)}`;
   }

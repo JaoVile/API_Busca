@@ -105,7 +105,7 @@ Apos subir:
    - **Senha Provider**: senha do usuario de integracao
    - **Token Quepasa**: token do bot copiado no passo 7
    - **URL Quepasa**: `http://localhost:31000`
-   - **WhatsApp**: numero com DDI+DDD (ex: `5581999430696`)
+   - **WhatsApp**: numero com DDI+DDD (ex: `5581999999999`)
 5. Clique em **"Testar Envio"** para validar
 
 ### 9. Personalizar a mensagem (opcional)
