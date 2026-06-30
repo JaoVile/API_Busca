@@ -1,6 +1,7 @@
 import { CredentialsService } from '../services/credentialsService';
 import { fetchProviderReport } from '../services/provider/providerOrchestrator';
 import { formatReportMessage } from '../services/messageFormatter';
+import { generateExecutiveSummary } from '../services/ai/aiSummaryService';
 import { sendWhatsAppMessage } from '../services/quepasa/sendMessage';
 import { ReportLogService } from '../services/reportLogService';
 import prisma from '../database/prismaClient';
@@ -34,8 +35,15 @@ export async function runReportForTenant(tenantId: string): Promise<void> {
     );
 
     // 3. PARSE - formatar mensagem (usa template customizado se houver)
-    const message = formatReportMessage(tenant!.companyName, report, creds.messageTemplate);
+    let message = formatReportMessage(tenant!.companyName, report, creds.messageTemplate);
     console.log(`[PIPELINE] Mensagem gerada para ${tenant!.companyName}`);
+
+    // 3b. IA - insight executivo opcional via Claude (não bloqueia o envio)
+    const summary = await generateExecutiveSummary(tenant!.companyName, report);
+    if (summary) {
+      message = `🧠 *Análise do dia*\n${summary}\n\n${message}`;
+      console.log(`[PIPELINE] Insight de IA adicionado para ${tenant!.companyName}`);
+    }
 
     // 4. DISPATCH - enviar via WhatsApp (mesmo com erros parciais)
     let sendError: string | undefined;

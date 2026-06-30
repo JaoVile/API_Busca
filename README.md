@@ -1,6 +1,10 @@
 # API Busca
 
-Multi-tenant SaaS que automatiza relatorios diarios: busca dados da API Provider SGA (gestao de veiculos), formata e envia via WhatsApp atraves do Quepasa.
+[![CI](https://github.com/JaoVile/API_Busca/actions/workflows/ci.yml/badge.svg)](https://github.com/JaoVile/API_Busca/actions/workflows/ci.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+
+Multi-tenant SaaS que automatiza relatorios diarios: busca dados da API Provider SGA (gestao de veiculos), formata e envia via WhatsApp atraves do Quepasa. Opcionalmente, gera um **insight executivo via IA (Claude)** no topo de cada relatorio.
 
 ## Requisitos do Sistema
 
@@ -177,8 +181,32 @@ Request -> Express Routes -> Controllers -> Services -> Provider API / Quepasa A
    - `POST listar/alteracao-veiculos { data: hoje }` -> cancelamentos do dia
    - `POST listar/boleto { mes_referente: MM/YYYY }` -> financeiro (pagos + abertos do mes)
 4. **Parse** — Aplica template customizavel com variaveis `{{...}}`, calcula percentuais, formata valores em pt-BR
-5. **Dispatch** — Envia mensagem formatada via Quepasa (WhatsApp)
-6. **Log** — Registra resultado (SUCCESS / PARTIAL_FAILURE / FAILURE) no banco
+5. **IA (opcional)** — Gera um insight executivo via Claude e adiciona ao topo da mensagem (veja abaixo)
+6. **Dispatch** — Envia mensagem formatada via Quepasa (WhatsApp)
+7. **Log** — Registra resultado (SUCCESS / PARTIAL_FAILURE / FAILURE) no banco
+
+### Insight executivo com IA (Claude)
+
+Quando a variavel `ANTHROPIC_API_KEY` esta configurada, o pipeline pede ao modelo
+**`claude-haiku-4-5`** (tier rapido/barato) um resumo executivo de 1-2 frases
+destacando o que mais exige atencao no dia (inadimplencia, queda de vendas, pico
+de cancelamentos). O resultado entra no topo do relatorio:
+
+```
+🧠 Análise do dia
+Inadimplência do mês acima de 40%, com 40 boletos em aberto — atenção à cobrança.
+
+📊 Relatório Diário — Atomos
+...
+```
+
+Decisoes de projeto (`src/services/ai/aiSummaryService.ts`):
+
+- **Recurso opcional, nunca bloqueante.** Sem `ANTHROPIC_API_KEY`, ou se a chamada
+  falhar/exceder o timeout (15s), a funcao retorna `null` e o relatorio segue sem o resumo.
+- **Anti-alucinacao.** O prompt (versionado em `EXECUTIVE_SUMMARY_PROMPT_V1`) instrui o
+  modelo a usar **somente** os numeros fornecidos — nunca inventar dados ou tendencias.
+- **Custo controlado.** Modelo barato + `max_tokens` baixo; roda uma vez por relatorio.
 
 **Dados diarios vs mensais:**
 
@@ -323,4 +351,4 @@ tests/
 
 ## Stack
 
-Node.js | Express 5 | TypeScript | PostgreSQL | Prisma 7 | JWT | AES-256-GCM | node-cron | Axios | Jest
+Node.js | Express 5 | TypeScript | PostgreSQL | Prisma 7 | JWT | AES-256-GCM | node-cron | Axios | Jest | Claude (Anthropic SDK)
