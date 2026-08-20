@@ -1,11 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
 
-const BASE_URL = 'https://api.exemplo.com/v2';
+const BASE_URL = process.env.PROVIDER_API_BASE_URL || 'https://api.exemplo.com/v2';
 
 /**
- * Etapa 1: Autentica com token SGA + usuario + senha
+ * Etapa 1: Autentica com token do provedor + usuario + senha
  * Retorna o token_usuario que será usado nas demais requisições
- * O token_usuario NÃO expira (conforme documentação Provider)
+ * O token_usuario NÃO expira (conforme documentação do provedor)
  */
 export async function authenticateProvider(
   providerToken: string,

@@ -25,7 +25,7 @@ export async function runReportForTenant(tenantId: string): Promise<void> {
       select: { companyName: true },
     });
 
-    // 2. FETCH - buscar dados da Provider
+    // 2. FETCH - buscar dados do provedor
     const report = await fetchProviderReport(
       creds.providerToken,
       creds.providerUser,

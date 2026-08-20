@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-Multi-tenant SaaS que automatiza relatorios diarios: busca dados da API Provider SGA (gestao de veiculos), formata e envia via WhatsApp atraves do Quepasa. Opcionalmente, gera um **insight executivo via IA (Claude)** no topo de cada relatorio.
+Multi-tenant SaaS que automatiza relatorios diarios: busca dados da API do provedor externo (gestao de veiculos), formata e envia via WhatsApp atraves do Quepasa. Opcionalmente, gera um **insight executivo via IA (Claude)** no topo de cada relatorio.
 
 ## Requisitos do Sistema
 
@@ -104,8 +104,8 @@ Apos subir:
 2. Cadastre uma conta (nome da empresa + email + senha)
 3. Clique em **"+ Nova Empresa"**
 4. Preencha:
-   - **Token Provider (SGA)**: gerado no menu Area Cliente > APIs > Gerenciar APIs do SGA
-   - **Usuario Provider**: usuario de integracao do SGA
+   - **Token Provider**: gerado no menu Area Cliente > APIs > Gerenciar APIs do provedor
+   - **Usuario Provider**: usuario de integracao do provedor
    - **Senha Provider**: senha do usuario de integracao
    - **Token Quepasa**: token do bot copiado no passo 7
    - **URL Quepasa**: `http://localhost:31000`
@@ -251,7 +251,7 @@ curl -X PUT http://localhost:3000/api/credentials \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer SEU_TOKEN_JWT" \
   -d '{
-    "providerToken":"token_do_sga",
+    "providerToken":"token_do_provedor",
     "providerUser":"usuario",
     "providerPass":"senha",
     "quepasaToken":"token_do_bot",

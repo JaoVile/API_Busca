@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Multi-tenant SaaS API that automates daily reports: fetches data from Provider SGA API (vehicle management), formats it, and sends via WhatsApp through Quepasa. Each tenant has isolated, AES-256-GCM encrypted credentials and a customizable message template.
+Multi-tenant SaaS API that automates daily reports: fetches data from an external provider API (vehicle management), formats it, and sends via WhatsApp through Quepasa. Each tenant has isolated, AES-256-GCM encrypted credentials and a customizable message template.
 
 ## Commands
 
@@ -71,8 +71,8 @@ Tests in `tests/` — unit tests (`encryption`, `dateUtils`, `messageFormatter`)
 
 ## Provider API Notes
 
-- Base URL: `https://api.exemplo.com/v2`
-- Auth: POST `/usuario/autenticar` with Bearer SGA token + usuario/senha body → returns `token_usuario`
+- Base URL: read from `PROVIDER_API_BASE_URL` env var (see `.env.example`)
+- Auth: POST `/usuario/autenticar` with Bearer provider token + usuario/senha body → returns `token_usuario`
 - Vehicles: POST `listar/veiculo` with `codigo_situacao` and optional `data_cadastro`/`data_cadastro_final` (format: `yyyy-mm-dd`)
 - Cancellations: POST `listar/alteracao-veiculos` with `data_inicial`/`data_final` (format: `dd/mm/yyyy`). Response items have `codigo_veiculo` but NO `codigo_regional` — to filter by region, cross-reference against `listar/veiculo` with cancel `codigo_situacao`.
 - Boletos: POST `listar/boleto` with `codigo_situacao` (1=BAIXADO, 2=ABERTO) and `mes_referente` (format: `MM/YYYY`).
@@ -87,7 +87,7 @@ The two paginated endpoints use **different semantics** for `inicio_paginacao`:
 
 Max `quantidade_por_pagina` is 5000 (returns 406 with `"O LIMITE máximo é de 5000"` if exceeded). We use 500 in production to keep individual requests small and avoid timeouts/token expiry mid-request.
 
-The `token_usuario` expires quickly between long requests — `createProviderClient` accepts SGA token/user/pass and installs an axios interceptor that re-authenticates on 401.
+The `token_usuario` expires quickly between long requests — `createProviderClient` accepts the provider token/user/pass and installs an axios interceptor that re-authenticates on 401.
 
 ### Regional / cooperativa filters (shared VehicleContext)
 
